@@ -43,18 +43,11 @@
         (empty box1)
         (empty box2)
         (empty box3)
-        (box-free box1)
-        (box-free box2)
-        (box-free box3)
 
         (at patient1 entrance)
         (at patient2 entrance)
         (at patient3 corridor1)
         (at patient4 corridor2)
-        (patient-free patient1)
-        (patient-free patient2)
-        (patient-free patient3)
-        (patient-free patient4)
 
         ; road map
         (connected central_warehouse corridor1)
@@ -84,13 +77,6 @@
         (patient-needs-unit patient2 MedicalUnit2b)
         (patient-needs-unit patient3 MedicalUnit3)
         (patient-needs-unit patient4 EmergencyUnit)
-
-        ; robot can carry and accompany
-        (robot-can-carry robot-box1)
-        (robot-can-carry robot-box2)
-        (robot-can-carry robot-box3)
-        (robot-can-accompany robot-patient1)
-        (robot-can-accompany robot-patient2)
     )
 
     (:goal

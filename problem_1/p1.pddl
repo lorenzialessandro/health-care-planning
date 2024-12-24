@@ -46,16 +46,7 @@
 
         (patient-needs-unit patient1 unit1)
         (patient-needs-unit patient2 unit2)
-        
-        ; Robot and box states
-        (robot-can-carry robot-box1)
-        (robot-can-accompany robot-patient1)
-
-        (box-free box1)
-        (box-free box2)
-       
-        (patient-free patient1)
-        (patient-free patient2)
+    
     )
 
     (:goal
