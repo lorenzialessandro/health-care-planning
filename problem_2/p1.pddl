@@ -1,73 +1,85 @@
-(define (problem p1)
+(define (problem p1-health-care-2)
     (:domain health-care-2)
     (:objects
-        box1 box2 box3 - box
-        carrier1 carrier2 - carrier ; carriers are not defined in the domain
-        robot-box1 robot-box2 - robot-box
+        box1 box2 box3 box4 - box
+        robot-box1 - robot-box
         robot-patient1 - robot-patient
-        
-        central_warehouse entrance
-        area1 area2
-        corridor1
-        - location
-        
-        MedicalUnit1 MedicalUnit2 - medical-unit
-        scalpel scissor aspirine - content
+        central_warehouse area1 area2 corridor1 - location
+        unit1 unit2 - medical-unit
+        bandage aspirine scalpel - content
         patient1 patient2 - patient
+
+        capacity0 capacity1 capacity2 capacity3 capacity4 - capacity-num
+        carrier1 - carrier
     )
 
     (:init
+        ; Locations
+        (connected central_warehouse corridor1)
+        (connected corridor1 central_warehouse)
+        (connected corridor1 area1)
+        (connected area1 corridor1)
+        (connected corridor1 area2)
+        (connected area2 corridor1)
+
+        (is-central_warehouse central_warehouse)
+        
+        ; Initial positions
         (at box1 central_warehouse)
         (at box2 central_warehouse)
         (at box3 central_warehouse)
-
-        (content-available scalpel central_warehouse)
-        (content-available scissor central_warehouse)
-
-        (at robot-box1 central_warehouse)
-        (at robot-box2 central_warehouse)
-        (at robot-patient1 entrance)
-
-        (at MedicalUnit1 area1)
-        (at MedicalUnit2 area2)
         
-        (empty box1)
-        (empty box2)
+        (at robot-box1 central_warehouse)
+        (at robot-patient1 central_warehouse)
+        
+        (at unit1 area1)
+        (at unit2 area2)
 
         (at patient1 corridor1)
-        (at patient2 entrance)
+        (at patient2 area1)
+        
+        ; Initial states
+        (empty box1)
+        (empty box2)
+        (empty box3)
+        
+        (content-available bandage central_warehouse)
+        (content-available aspirine central_warehouse)
+        (content-available scalpel central_warehouse)
 
-        ; road map
-        (connected central_warehouse area1)
-        (connected central_warehouse area2)
-        (connected entrance corridor1)
-        (connected corridor1 area1)
-        (connected corridor1 area2)
+        ; Carriers 
+        (next-capacity capacity0 capacity1)
+        (next-capacity capacity1 capacity2)
+        (next-capacity capacity2 capacity3)
+        (next-capacity capacity3 capacity4)
 
-        ; unit needs content
-        (unit-needs-content MedicalUnit1 scalpel)
-        (unit-needs-content MedicalUnit2 scissor)
-        ; patient needs accompaniment
-        (patient-needs-unit patient2 MedicalUnit2)
-        (patient-needs-unit patient1 MedicalUnit1)
+        ; carrier1 can carry 2 boxes and start with 0 boxes
+            ; NOTE: capacity3 represents the MAXIMUM capacity value, not the number of boxes. 
+            ; The carrier can only load boxes until reaching capacity3:
+                ; capacity0 → capacity1 (1 box)
+                ; capacity1 → capacity2 (2 boxes)
+        (carrier-has-capacity carrier1 capacity3) ; max 2 boxes in carrier1
+        (carrier-current-capacity carrier1 capacity0) ; start with 0 boxes 
+        
+        (robot-has-carrier robot-box1 carrier1) ; robot-box1 has carrier1
 
-        ; robot has carrier
-        (robot-has-carrier robot-box1 carrier1)
-        (robot-has-carrier robot-box2 carrier2)
-        ; define carrier capacity
-        (= (carrier-capacity carrier1) 1)
-        (= (carrier-capacity carrier2) 2)
+        ; Needs
+        (unit-needs-content unit1 bandage)
+        (unit-needs-content unit1 aspirine)
+        (unit-needs-content unit2 scalpel)
 
+        (patient-needs-unit patient1 unit1)
+        (patient-needs-unit patient2 unit2)
     )
 
     (:goal
         (and
-            (unit-has-content MedicalUnit1 scalpel)
-            (unit-has-content MedicalUnit2 scissor)
-            (unit-has-content MedicalUnit2 aspirine)
+            (unit-has-content unit1 bandage)
+            (unit-has-content unit1 aspirine)
+            (unit-has-content unit2 scalpel)
 
-            (patient-at-unit patient2 MedicalUnit2)
-            (patient-at-unit patient1 MedicalUnit1)
+            (patient-at-unit patient1 unit1)
+            (patient-at-unit patient2 unit2)
         )
     )
 )
