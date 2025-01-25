@@ -14,6 +14,7 @@
         ; box predicates
         (empty ?b - box)
         (box-has-content ?b - box ?c - content)
+        (box-ready ?b - box) ; box is ready for pickup
         ; content predicates
         (content-available ?c - content ?l - location)
         (unit-needs-content ?u - medical-unit ?c - content)
@@ -30,9 +31,11 @@
     (:action pick-up-box
         :parameters (?r - robot-box ?b - box ?l - location)
         :precondition (and
+            ; box and robot are at the same location
             (at ?r ?l)
             (at ?b ?l)
-
+            ; box is ready for pickup
+            (box-ready ?b)
             ; check that the robot is not already loaded with another box => here a robot can carry only one box at a time ; CHECK 
             ; (can be also done with a predicate ad hot as "can-carry-box")
             (not (exists
@@ -46,6 +49,7 @@
         )
         :effect (and
             (robot-has-box ?r ?b)
+            (not (box-ready ?b)) ; reset status of the box
         )
     )
 
@@ -75,16 +79,19 @@
     (:action fill-box
         :parameters (?r - robot-box ?b - box ?c - content ?l - location)
         :precondition (and
+            ; box is empty
             (empty ?b)
+            ; robot and box are at the same location
             (at ?r ?l)
             (at ?b ?l)
+            ; content is available at the location
             (content-available ?c ?l)
-            (robot-has-box ?r ?b)
         )
         :effect (and
             (not (empty ?b))
             (box-has-content ?b ?c)
             (not (content-available ?c ?l)) ; basically this means that the content is no longer available at the warehouse 
+            (box-ready ?b) ; box is ready for pickup
         )
     )
 
@@ -130,6 +137,7 @@
             (robot-has-box ?r ?b)
             (box-has-content ?b ?c)   
             (unit-needs-content ?u ?c) ; the predicate "unit-needs-content" is an extra check to avoid delivering content to a unit that does not need it, so to avoid extra moves
+            (not (empty ?b))
         )
         :effect (and
             (unit-has-content ?u ?c)
@@ -137,7 +145,7 @@
             (not (box-has-content ?b ?c))
             (not (robot-has-box ?r ?b)) ; robot is not carrying the box anymore : robot is free to carry another box or to reuse the same box
             (empty ?b)
-            (at ?b ?l) ; box is empty and at the location (can be reused)
+            (box-ready ?b) ; box is ready for pickup 
         )
     )
 
@@ -155,6 +163,5 @@
             (not (patient-needs-unit ?p ?u))
             (not (robot-has-patient ?r ?p))
         )
-
     )
 )
