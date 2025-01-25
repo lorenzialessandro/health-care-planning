@@ -1,4 +1,4 @@
-(define (domain health-care-1)
+(define (domain health-care-basic)
     (:requirements :strips :typing :negative-preconditions)
 
     (:types

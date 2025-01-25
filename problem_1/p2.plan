@@ -1,5 +1,5 @@
-;;!domain: health-care-1
-;;!problem: p2-health-care-1
+;;!domain: health-care-basic
+;;!problem: p2-health-care-basic
 
 0.00000: (pick-up-patient robot-patient1 patient2 entrance)
 0.00100: (pick-up-box robot-box1 box1 central_warehouse)

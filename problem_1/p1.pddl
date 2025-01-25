@@ -1,5 +1,5 @@
-(define (problem p1-health-care-1)
-    (:domain health-care-1)
+(define (problem p1-health-care-basic)
+    (:domain health-care-basic)
     (:objects
         box1 box2 - box
         robot-box1 - robot-box

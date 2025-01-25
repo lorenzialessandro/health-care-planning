@@ -1,5 +1,5 @@
-;;!domain: health-care-1
-;;!problem: p1-health-care-1
+;;!domain: health-care-basic
+;;!problem: p1-health-care-basic
 
 0.00000: (move-robot robot-patient1 warehouse corridor1)
 0.00100: (pick-up-patient robot-patient1 patient1 corridor1)

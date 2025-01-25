@@ -1,5 +1,5 @@
-(define (problem p3-health-care-1)
-    (:domain health-care-1)
+(define (problem p3-health-care-basic)
+    (:domain health-care-basic)
     ;; same problem as p2, but with multiple robots:
     ; theare 3 box-robots and 2 patient-robots
     (:objects
