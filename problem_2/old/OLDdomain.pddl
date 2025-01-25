@@ -1,21 +1,19 @@
 (define (domain health-care-2)
-    (:requirements :strips :typing :negative-preconditions :numeric-fluents)
+    (:requirements :adl)
 
     (:types
         medical-unit box content robot patient - locatable
         robot-box robot-patient - robot
-        location - object
-    )
-
-    (:functions
-        (carrier-capacity ?cr - carrier) ; max capacity of the carrier
-        (carrier-load ?cr - carrier) ; current load of the carrier
+        location 
+        carrier 
+        capacity-num - object
     )
 
     (:predicates
         ; location predicates
         (at ?o - locatable ?l - location)
         (connected ?l1 - location ?l2 - location)
+        (is-central_warehouse ?l - location)
         ; box predicates
         (empty ?b - box)
         (box-has-content ?b - box ?c - content)
@@ -29,28 +27,39 @@
         ; robot-box with CARRIER predicates
         (robot-has-carrier ?r - robot ?cr - carrier)
         (box-in-carrier ?b - box ?cr - carrier)
+        ; carrier capacity predicates
+        (carrier-has-capacity ?cr - carrier ?n - capacity-num) ; that's the maximum capacity of the carrier
+        (next-capacity ?n1 - capacity-num ?n2 - capacity-num)
+        (carrier-current-capacity ?cr - carrier ?n - capacity-num)
+        (carrier-pending-box ?cr - carrier ?b - box) ; useful to avoid the carrier to return to the central_warehouse if there are still boxes to deliver (so there are non empty boxes in the carrier)
         ; robot-patient predicates
         (robot-has-patient ?r - robot-patient ?p - patient)
     )
 
     (:action load-box-carrier
-        :parameters (?r - robot-box ?b - box ?c - carrier ?l - location)
+        :parameters (?r - robot-box ?b - box ?c - carrier ?l - location ?current ?next ?max - capacity-num)
         :precondition (and
             ; box and robot are at the same location
             (at ?r ?l)
             (at ?b ?l)
             ; robot has that carrier
             (robot-has-carrier ?r ?c)
-            ; carrier can be loaded with that box
-            (< (carrier-load ?c) (carrier-capacity ?c))
-            ; the box is not already loaded in another ; CHECK
+           
+            (carrier-current-capacity ?c ?current)
+            (next-capacity ?current ?next)
+            (carrier-has-capacity ?c ?max) 
+            ; check that carrier is not already full
+            (not (next-capacity ?current ?max)) ; if the current capacity is the maximum, then the carrier is full => no more boxes can be 
+
+            ; the box is not already loaded in another robot ; CHECK
             (not (exists
                     (?c2 - carrier)
                     (box-in-carrier ?b ?c2)))
         )
         :effect (and
             (box-in-carrier ?b ?c)
-            (increase (carrier-load ?c) 1)
+            (not (carrier-current-capacity ?c ?current))
+            (carrier-current-capacity ?c ?next)
         )
     )
 
@@ -63,20 +72,35 @@
             (box-in-carrier ?b ?cr)
             (empty ?b)
             (content-available ?c ?l)
+            (not (carrier-pending-box ?cr ?b))
         )
         :effect (and
             (not (empty ?b))
             (box-has-content ?b ?c)
-            (not (content-available ?c ?l)) ; basically this means that the content is no longer available at the warehouse 
+            (not (content-available ?c ?l)) ; basically this means that the content is no longer available at the central_warehouse 
+            (carrier-pending-box ?cr ?b) ; update is here because the box is not empty anymore
         )
     )
 
     (:action move-robot-box
-        :parameters (?r - robot-box ?c - carrier ?from - location ?to - location)
+        :parameters (?r - robot-box ?cr - carrier ?from - location ?to - location)
         :precondition (and
             (at ?r ?from)
             (connected ?from ?to)
-            (robot-has-carrier ?r ?c)
+            (not (= ?from ?to))
+            (robot-has-carrier ?r ?cr)
+
+            ; robot does not have to return to the central_warehouse until all boxes on the carrier have been delivered
+            (or
+                ; if the robot is not at the central_warehouse, then it can move to any location
+                (not (is-central_warehouse ?to)) 
+                ; if the robot is at the central_warehouse, then it can move to any location if it is not carrying any box (i.e., either the carrier is empty or all boxes in the carrier are empty)
+                (and 
+                    (is-central_warehouse ?to)
+                    (not (exists (?b - box) (carrier-pending-box ?cr ?b)
+                    ))
+                )
+            )
         )
         :effect (and
             (at ?r ?to)
@@ -85,7 +109,7 @@
             (forall
                 (?b - box)
                 (when
-                    (box-in-carrier ?b ?c)
+                    (box-in-carrier ?b ?cr)
                     (and
                         (at ?b ?to)
                         (not (at ?b ?from))
@@ -96,7 +120,7 @@
     )
 
     (:action deliver-content
-        :parameters (?r - robot-box ?cr - carrier ?b - box ?u - medical-unit ?c - content ?l - location)
+        :parameters (?r - robot-box ?cr - carrier ?b - box ?u - medical-unit ?c - content ?l - location ?current ?prev - capacity-num)
         :precondition (and
             (at ?r ?l)
             (at ?u ?l)
@@ -104,16 +128,20 @@
             (box-in-carrier ?b ?cr)
             (box-has-content ?b ?c)
             (unit-needs-content ?u ?c) ; the predicate "unit-needs-content" is an extra check to avoid delivering content to a unit that does not need it, so to avoid extra moves
+            (carrier-current-capacity ?cr ?current)
+            (next-capacity ?prev ?current)
         )
         :effect (and
             (unit-has-content ?u ?c)
             (not (unit-needs-content ?u ?c))
             (not (box-has-content ?b ?c))
             (not (box-in-carrier ?b ?cr)) ; the box is no longer in the carrier
+            (not (carrier-pending-box ?cr ?b)) ; the box has been delivered
             (empty ?b)
             (at ?b ?l) ; box is empty and at the location (can be reused)
             ; update carrier load
-            (decrease (carrier-load ?cr) 1)
+            (not (carrier-current-capacity ?cr ?current))
+            (carrier-current-capacity ?cr ?prev)
         )
     )
 
@@ -122,7 +150,6 @@
         :precondition (and
             (at ?r ?l)
             (at ?p ?l)
-
             ; check that the robot is not already loaded with another patient => here a robot can carry only one patient at a time ; CHECK
             ; (can be also done with a predicate ad hot as "can-carry-patient")
             (not (exists

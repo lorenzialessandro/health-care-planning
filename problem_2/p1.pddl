@@ -1,7 +1,7 @@
-(define (problem p1-health-care-2)
-    (:domain health-care-2)
+(define (problem p1-health-care)
+    (:domain health-care)
     (:objects
-        box1 box2 box3 box4 - box
+        box1 box2  - box
         robot-box1 - robot-box
         robot-patient1 - robot-patient
         central_warehouse area1 area2 corridor1 - location
@@ -27,7 +27,6 @@
         ; Initial positions
         (at box1 central_warehouse)
         (at box2 central_warehouse)
-        (at box3 central_warehouse)
         
         (at robot-box1 central_warehouse)
         (at robot-patient1 central_warehouse)
@@ -41,7 +40,6 @@
         ; Initial states
         (empty box1)
         (empty box2)
-        (empty box3)
         
         (content-available bandage central_warehouse)
         (content-available aspirine central_warehouse)

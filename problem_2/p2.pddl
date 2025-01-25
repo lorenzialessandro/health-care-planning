@@ -1,5 +1,5 @@
-(define (problem p2-health-care-2)
-    (:domain health-care-2)
+(define (problem p2-health-care)
+    (:domain health-care)
     (:objects
         box1 box2 box3 box4 - box
         robot-box1 robot-box2 - robot-box
@@ -33,6 +33,8 @@
         (connected corridor2 emergency_area)
         (connected entrance corridor2)
         (connected corridor2 entrance)
+
+        (is-central_warehouse central_warehouse)
 
         ; Initial positions
         (at box1 central_warehouse)

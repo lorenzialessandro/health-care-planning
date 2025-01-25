@@ -1,0 +1,13 @@
+;;!domain: health-care
+;;!problem: p3-health-care
+
+0.00000: (fill-box robot-box carrier box2 aspirine central_warehouse)
+0.00100: (fill-box robot-box carrier box1 scalpel central_warehouse)
+0.00200: (load-box-carrier robot-box box1 carrier central_warehouse capacity0 capacity1 capacity3)
+0.00300: (load-box-carrier robot-box box2 carrier central_warehouse capacity1 capacity2 capacity3)
+0.00400: (move-robot-box robot-box carrier central_warehouse area)
+0.00500: (deliver-content robot-box carrier box2 unit aspirine area capacity2 capacity1)
+0.00600: (deliver-content robot-box carrier box1 unit scalpel area capacity1 capacity0)
+
+; Makespan: 0.006
+; Metric: 0.006
