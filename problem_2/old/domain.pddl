@@ -44,17 +44,13 @@
             (at ?b ?l)
             ; robot has that carrier
             (robot-has-carrier ?r ?c)
-           
+
             (carrier-current-capacity ?c ?current)
             (next-capacity ?current ?next)
             (carrier-has-capacity ?c ?max) 
-            ; check that carrier is not already full
-            (not (next-capacity ?current ?max)) ; if the current capacity is the maximum, then the carrier is full => no more boxes can be 
 
-            ; the box is not already loaded in another robot ; CHECK
-            (not (exists
-                    (?c2 - carrier)
-                    (box-in-carrier ?b ?c2)))
+            ; check that carrier is not already full
+            (not (next-capacity ?current ?max)) ; if the current capacity is the maximum, then the carrier is full => no more boxes can be             
         )
         :effect (and
             (box-in-carrier ?b ?c)
@@ -64,20 +60,35 @@
     )
 
     (:action fill-box
+        ; A box can be filled in two scenarios:
+            ; 1. When the box is not loaded in any carrier (normal fill-then-load pattern)
+            ; 2. When the box is loaded in this specific robot's carrier (allowing box reuse pattern)
+        ; This enables both the preferred pattern of filling before loading, while also allowing robots to reuse boxes after delivery by loading them empty and then filling.
         :parameters (?r - robot-box ?cr - carrier ?b - box ?c - content ?l - location)
         :precondition (and
+            ; robot and box are at the same location
+            (robot-has-carrier ?r ?cr)
             (at ?r ?l)
             (at ?b ?l)
-            (robot-has-carrier ?r ?cr)
-            (box-in-carrier ?b ?cr)
+            ; box is empty
             (empty ?b)
+            ; content is available at the location
             (content-available ?c ?l)
+
+            (or 
+                ; either the box is not in any carrier
+                (not (exists (?c2 - carrier) (box-in-carrier ?b ?c2)))
+                ; or the box is specifically in this robot's carrier
+                (box-in-carrier ?b ?cr)
+            )
+            
             (not (carrier-pending-box ?cr ?b))
         )
         :effect (and
             (not (empty ?b))
             (box-has-content ?b ?c)
             (not (content-available ?c ?l)) ; basically this means that the content is no longer available at the central_warehouse 
+
             (carrier-pending-box ?cr ?b) ; update is here because the box is not empty anymore
         )
     )
@@ -130,6 +141,7 @@
             (unit-needs-content ?u ?c) ; the predicate "unit-needs-content" is an extra check to avoid delivering content to a unit that does not need it, so to avoid extra moves
             (carrier-current-capacity ?cr ?current)
             (next-capacity ?prev ?current)
+            (not (empty ?b))
         )
         :effect (and
             (unit-has-content ?u ?c)

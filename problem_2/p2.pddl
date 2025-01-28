@@ -1,7 +1,7 @@
 (define (problem p2-health-care)
     (:domain health-care)
     (:objects
-        box1 box2 box3 box4 - box
+        box1 box2 box3 box4 box5 box6 - box
         robot-box1 robot-box2 - robot-box
         robot-patient1 - robot-patient
         
@@ -41,6 +41,8 @@
         (at box2 central_warehouse)
         (at box3 central_warehouse)
         (at box4 central_warehouse)
+        (at box5 central_warehouse)
+        (at box6 central_warehouse)
 
         (content-available scalpel central_warehouse)
         (content-available aspirine central_warehouse)
@@ -70,7 +72,9 @@
         (empty box2)
         (empty box3)
         (empty box4)
-        
+        (empty box5)
+        (empty box6)
+
         ; Carriers 
         (next-capacity capacity0 capacity1)
         (next-capacity capacity1 capacity2)
