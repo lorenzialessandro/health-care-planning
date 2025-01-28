@@ -63,6 +63,8 @@
         (connected entrance corridor2)
         (connected corridor2 entrance)
 
+        (is-central_warehouse central_warehouse)
+
 
         ; unit needs content
         (unit-needs-content MedicalUnit1 scalpel)

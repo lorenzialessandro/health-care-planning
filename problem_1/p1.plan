@@ -27,7 +27,6 @@
 0.02300: (pick-up-box robot-box1 box2 warehouse)
 0.02400: (move-robot robot-box1 warehouse corridor1)
 0.02500: (move-robot robot-box1 corridor1 area2)
-0.02600: (deliver-content robot-box1 box2 unit2 scalpel area2)
 
-; Makespan: 0.026000000000000016
-; Metric: 0.026000000000000016
+; Makespan: 0.025000000000000015
+; Metric: 0.025000000000000015

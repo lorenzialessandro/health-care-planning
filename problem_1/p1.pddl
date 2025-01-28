@@ -18,6 +18,8 @@
         (connected area1 corridor1)
         (connected corridor1 area2)
         (connected area2 corridor1)
+
+        (is-central_warehouse warehouse)
         
         ; Initial positions
         (at box1 warehouse)

@@ -11,10 +11,10 @@
         ; location predicates
         (at ?o - locatable ?l - location)
         (connected ?l1 - location ?l2 - location)
+        (is-central_warehouse ?l - location)
         ; box predicates
         (empty ?b - box)
         (box-has-content ?b - box ?c - content)
-        (box-ready ?b - box) ; box is ready for pickup
         ; content predicates
         (content-available ?c - content ?l - location)
         (unit-needs-content ?u - medical-unit ?c - content)
@@ -34,10 +34,13 @@
             ; box and robot are at the same location
             (at ?r ?l)
             (at ?b ?l)
-            ; box is ready for pickup
-            (box-ready ?b)
+            ; if location is central_warehouse, then the box must be full
+            (or
+                (not (is-central_warehouse ?l)) 
+                (not (empty ?b))
+            )
             ; check that the robot is not already loaded with another box => here a robot can carry only one box at a time ; CHECK 
-            ; (can be also done with a predicate ad hot as "can-carry-box")
+            ; (can be also done with a predicate ad hoc as "can-carry-box")
             (not (exists
                     (?b2 - box)
                     (robot-has-box ?r ?b2)))
@@ -49,7 +52,6 @@
         )
         :effect (and
             (robot-has-box ?r ?b)
-            (not (box-ready ?b)) ; reset status of the box
         )
     )
 
@@ -91,7 +93,6 @@
             (not (empty ?b))
             (box-has-content ?b ?c)
             (not (content-available ?c ?l)) ; basically this means that the content is no longer available at the warehouse 
-            (box-ready ?b) ; box is ready for pickup
         )
     )
 
@@ -145,7 +146,6 @@
             (not (box-has-content ?b ?c))
             (not (robot-has-box ?r ?b)) ; robot is not carrying the box anymore : robot is free to carry another box or to reuse the same box
             (empty ?b)
-            (box-ready ?b) ; box is ready for pickup 
         )
     )
 
