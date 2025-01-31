@@ -1,4 +1,4 @@
-(define (domain health-care-2)
+(define (domain health-care)
     (:requirements :adl)
 
     (:types
@@ -31,7 +31,6 @@
         (carrier-has-capacity ?cr - carrier ?n - capacity-num) ; that's the maximum capacity of the carrier
         (next-capacity ?n1 - capacity-num ?n2 - capacity-num)
         (carrier-current-capacity ?cr - carrier ?n - capacity-num)
-        (carrier-pending-box ?cr - carrier ?b - box) ; useful to avoid the carrier to return to the central_warehouse if there are still boxes to deliver (so there are non empty boxes in the carrier)
         ; robot-patient predicates
         (robot-has-patient ?r - robot-patient ?p - patient)
     )
@@ -44,6 +43,12 @@
             (at ?b ?l)
             ; robot has that carrier
             (robot-has-carrier ?r ?c)
+
+            ; if location is central_warehouse, then the box must be full
+            (or
+                (not (is-central_warehouse ?l)) 
+                (not (empty ?b))
+            )
 
             (carrier-current-capacity ?c ?current)
             (next-capacity ?current ?next)
@@ -59,37 +64,29 @@
         )
     )
 
+
     (:action fill-box
-        ; A box can be filled in two scenarios:
-            ; 1. When the box is not loaded in any carrier (normal fill-then-load pattern)
-            ; 2. When the box is loaded in this specific robot's carrier (allowing box reuse pattern)
-        ; This enables both the preferred pattern of filling before loading, while also allowing robots to reuse boxes after delivery by loading them empty and then filling.
         :parameters (?r - robot-box ?cr - carrier ?b - box ?c - content ?l - location)
         :precondition (and
-            ; robot and box are at the same location
-            (robot-has-carrier ?r ?cr)
+            ; box and robot are at the same location
             (at ?r ?l)
             (at ?b ?l)
+            ; robot has that carrier
+            (robot-has-carrier ?r ?cr)
             ; box is empty
             (empty ?b)
             ; content is available at the location
             (content-available ?c ?l)
 
-            (or 
-                ; either the box is not in any carrier
-                (not (exists (?c2 - carrier) (box-in-carrier ?b ?c2)))
-                ; or the box is specifically in this robot's carrier
-                (box-in-carrier ?b ?cr)
+            (or
+                (box-in-carrier ?b ?cr) ; if the box is in the carrier and it is empty (up), then it can be reutilized and filled with a new content
+                (not (exists (?cr2 - carrier) (box-in-carrier ?b ?cr2))) ; if the box is not in the carrier, then it can be filled with a new content
             )
-            
-            (not (carrier-pending-box ?cr ?b))
         )
         :effect (and
             (not (empty ?b))
             (box-has-content ?b ?c)
-            (not (content-available ?c ?l)) ; basically this means that the content is no longer available at the central_warehouse 
-
-            (carrier-pending-box ?cr ?b) ; update is here because the box is not empty anymore
+            (not (content-available ?c ?l)) 
         )
     )
 
@@ -103,12 +100,16 @@
 
             ; robot does not have to return to the central_warehouse until all boxes on the carrier have been delivered
             (or
-                ; if the robot is not at the central_warehouse, then it can move to any location
+                ; if destination is not the central_warehouse robot can move always
                 (not (is-central_warehouse ?to)) 
-                ; if the robot is at the central_warehouse, then it can move to any location if it is not carrying any box (i.e., either the carrier is empty or all boxes in the carrier are empty)
+                ; if destination is the central_warehouse, then the carrier must be empty: no box is in the carrier that are not empty
                 (and 
                     (is-central_warehouse ?to)
-                    (not (exists (?b - box) (carrier-pending-box ?cr ?b)
+                    (not (exists (?b - box)
+                        (and 
+                            (box-in-carrier ?b ?cr)
+                            (not (empty ?b))
+                        )    
                     ))
                 )
             )
@@ -136,11 +137,15 @@
             (at ?r ?l)
             (at ?u ?l)
             (robot-has-carrier ?r ?cr)
+
             (box-in-carrier ?b ?cr)
             (box-has-content ?b ?c)
+            
             (unit-needs-content ?u ?c) ; the predicate "unit-needs-content" is an extra check to avoid delivering content to a unit that does not need it, so to avoid extra moves
+            
             (carrier-current-capacity ?cr ?current)
             (next-capacity ?prev ?current)
+            
             (not (empty ?b))
         )
         :effect (and
@@ -148,9 +153,9 @@
             (not (unit-needs-content ?u ?c))
             (not (box-has-content ?b ?c))
             (not (box-in-carrier ?b ?cr)) ; the box is no longer in the carrier
-            (not (carrier-pending-box ?cr ?b)) ; the box has been delivered
+
             (empty ?b)
-            (at ?b ?l) ; box is empty and at the location (can be reused)
+            
             ; update carrier load
             (not (carrier-current-capacity ?cr ?current))
             (carrier-current-capacity ?cr ?prev)
