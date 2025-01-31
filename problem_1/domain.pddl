@@ -1,5 +1,5 @@
 (define (domain healthcare_basic)
-    (:requirements :strips :typing :action-costs)
+    (:requirements :strips :typing)
     (:types
         medical_unit box supply robot patient - locatable
         robot_box robot_patient - robot
