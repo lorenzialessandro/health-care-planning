@@ -1,27 +1,25 @@
-(define (problem p1-health-care-htn)
-    (:domain health-care-htn)
+(define (problem healthcare_htn_p1)
+    (:domain healthcare_htn)
     (:objects
-        box1 box2 box3 box4 - box
-        robot-box1 - robot-box
-        robot-patient1 - robot-patient
-        central_warehouse area1 area2 corridor1 - location
-        unit1 unit2 - medical-unit
-        bandage aspirine scalpel - content
+        warehouse loc1 loc2 loc3 - location
+        unit1 unit2 unit3 - medical_unit
+        supply1 supply2 supply3 - supply
+        box1 box2 box3 - box
         patient1 patient2 - patient
-
-        capacity0 capacity1 capacity2 capacity3 capacity4 - capacity-num
+        robot1 - robot_box
+        robot2 - robot_patient
         carrier1 - carrier
     )
 
     (:htn
         :parameters ()
         :subtasks (and
-            (task0 (deliver-supply bandage unit1))
-            (task1 (deliver-supply aspirine unit1))
-            (task2 (deliver-supply scalpel unit2))
-            
-            (task3 (accompany-patient patient1 unit1))
-            (task4 (accompany-patient patient2 unit2))
+            (task0 (deliver_supply_to_unit supply1 unit1))
+            (task1 (deliver_supply_to_unit supply2 unit2))
+            (task2 (deliver_supply_to_unit supply3 unit3))
+
+            (task3 (accompany_patient_to_unit patient1 unit3))
+            (task4 (accompany_patient_to_unit patient2 unit1))
         )
         :ordering (and
             (task0 < task1)
@@ -32,57 +30,61 @@
     )
 
     (:init
-        ; Locations
-        (connected central_warehouse corridor1)
-        (connected corridor1 central_warehouse)
-        (connected corridor1 area1)
-        (connected area1 corridor1)
-        (connected corridor1 area2)
-        (connected area2 corridor1)
+        ; Location connections
+        (connected warehouse loc1)
+        (connected loc1 warehouse)
+        (connected loc1 loc2)
+        (connected loc2 loc1)
+        (connected loc2 loc3)
+        (connected loc3 loc2)
+        
+        ; Initial locations
+        (at robot1 warehouse)
+        (at carrier1 warehouse)
+        (at robot2 warehouse)
+        (at box1 warehouse)
+        (at box2 warehouse)
+        (at box3 warehouse)
+        (at supply1 warehouse)
+        (at supply2 warehouse)
+        (at supply3 warehouse)
+        (at patient1 loc1)
+        (at patient2 loc2)
 
-        (is-central_warehouse central_warehouse)
         
-        ; Initial positions
-        (at box1 central_warehouse)
-        (at box2 central_warehouse)
-        (at box3 central_warehouse)
+        ; Unit locations
+        (at unit1 loc1)
+        (at unit2 loc2)
+        (at unit3 loc3)
         
-        (at robot-box1 central_warehouse)
-        (at robot-patient1 central_warehouse)
-        
-        (at unit1 area1)
-        (at unit2 area2)
-
-        (at patient1 corridor1)
-        (at patient2 area1)
-        
-        ; Initial states
+        ; Initial box states
+        (box_unloaded box1)
+        (box_unloaded box2)
+        (box_unloaded box3)
         (empty box1)
         (empty box2)
         (empty box3)
+
+        ; Initial patient states
+        (patient_unloaded patient1)
+        (patient_unloaded patient2)
         
-        (content-available bandage central_warehouse)
-        (content-available aspirine central_warehouse)
-        (content-available scalpel central_warehouse)
+        ; Initial carrier state
+        (carrier_empty carrier1)
+        (has_capacity_one carrier1) (has_capacity_two carrier1) (has_capacity_three carrier1)
 
-        ; Carriers 
-        (next-capacity capacity0 capacity1)
-        (next-capacity capacity1 capacity2)
-        (next-capacity capacity2 capacity3)
-        (next-capacity capacity3 capacity4)
+        ; Initial robot state
+        (robot_patient_empty robot2)
 
-        (carrier-has-capacity carrier1 capacity3) ; max 2 boxes in carrier1
-        (carrier-current-capacity carrier1 capacity0) ; start with 0 boxes 
-        
-        (robot-has-carrier robot-box1 carrier1) ; robot-box1 has carrier1
 
-        ; Needs
-        (unit-needs-content unit1 bandage)
-        (unit-needs-content unit1 aspirine)
-        (unit-needs-content unit2 scalpel)
+        ; Supply needs
+        (unit_needs_supply unit1 supply1)
+        (unit_needs_supply unit2 supply2)
+        (unit_needs_supply unit3 supply3)
 
-        (patient-needs-unit patient1 unit1)
-        (patient-needs-unit patient2 unit2)
+        ; Patient needs
+        (patient_needs_unit patient1 unit3)
+        (patient_needs_unit patient2 unit1)
     )
 )
 

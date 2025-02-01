@@ -1,369 +1,727 @@
-(define (domain health-care-htn)
+(define (domain healthcare_htn)
     (:requirements :typing :hierachie)
-
     (:types
-        medical-unit box content robot patient - locatable
-        robot-box robot-patient - robot
-        location carrier capacity-num - object
+        medical_unit box supply robot carrier patient - locatable
+        robot_box robot_patient - robot
+        location - object
     )
 
     (:predicates
-        ; location predicates
+        ; Location predicates
         (at ?o - locatable ?l - location)
         (connected ?l1 - location ?l2 - location)
-        (is-central_warehouse ?l - location)
-        ; box predicates
+        
+        ; Box predicates
+        (box_loaded_in_carrier ?b - box ?c - carrier)
+        (box_unloaded ?b - box)
         (empty ?b - box)
-        (box-has-content ?b - box ?c - content)
-        ; content predicates
-        (content-available ?c - content ?l - location)
-        (unit-needs-content ?u - medical-unit ?c - content)
-        (unit-has-content ?u - medical-unit ?c - content)
-        ; patient predicates
-        (patient-needs-unit ?p - patient ?u - medical-unit)
-        (patient-at-unit ?p - patient ?u - medical-unit)
-        ; robot-box with CARRIER predicates
-        (robot-has-carrier ?r - robot ?cr - carrier)
-        (box-in-carrier ?b - box ?cr - carrier)
-        ; carrier capacity predicates
-        (carrier-has-capacity ?cr - carrier ?n - capacity-num)
-        (next-capacity ?n1 - capacity-num ?n2 - capacity-num)
-        (carrier-current-capacity ?cr - carrier ?n - capacity-num)
-        ; robot-patient predicates
-        (robot-has-patient ?r - robot-patient ?p - patient)
+        (box_has_supply ?b - box ?s - supply)
+        
+        ; Unit predicates
+        (unit_needs_supply ?u - medical_unit ?s - supply)
+        (unit_has_supply ?u - medical_unit ?s - supply)
+        
+        ; Carrier capacity tracking
+        (has_one_box ?c - carrier)
+        (has_two_boxes ?c - carrier)
+        (has_three_boxes ?c - carrier)
+        
+        (carrier_empty ?c - carrier)
+        
+        (has_capacity_one ?c - carrier)
+        (has_capacity_two ?c - carrier)
+        (has_capacity_three ?c - carrier)
+
+        ; Patient predicates
+        (patient_unloaded ?p - patient)
+        (patient_loaded_in_robot ?p - patient ?r - robot_patient)
+        (patient_needs_unit ?p - patient ?u - medical_unit)
+        (patient_at_unit ?p - patient ?u - medical_unit)
+
+        ; Robot patient predicates
+        (robot_patient_empty ?r - robot_patient)
+        
     )
 
     ; Essential Abstract Tasks
-    (:task deliver-supply
-        :parameters (?c - content ?u - medical-unit)
-        :precondition()
-        :effect()
+    (:task deliver_supply_to_unit
+        :parameters (?s - supply ?u - medical_unit)
+        :precondition ()
+        :effect ()
     )
 
-    (:task accompany-patient
-        :parameters (?p - patient ?u - medical-unit)
-        :precondition()
-        :effect()
+    (:task accompany_patient_to_unit
+        :parameters (?p - patient ?u - medical_unit)
+        :precondition ()
+        :effect ()
     )
 
-    (:task navigate-robot
-        :parameters (?r - robot ?to - location)
-        :precondition()
-        :effect()
+    (:task navigate_carrier
+        :parameters (?r - robot_box ?c - carrier ?l - location)
+        :precondition ()
+        :effect ()
     )
+
+    (:task navigate_robot_patient
+        :parameters (?r - robot_patient ?l - location)
+        :precondition ()
+        :effect ()
+    )
+    
 
     ; Methods
-    (:method m-deliver-supply
-        :parameters (?c - content ?u - medical-unit ?r - robot-box ?cr - carrier ?from ?to - location ?b - box ?current ?next ?max ?prev - capacity-num)
-        :task (deliver-supply ?c ?u)
+
+    ; Accompany a patient to unit
+    (:method m_accompany_patient
+        :parameters (?p - patient ?u - medical_unit ?r - robot_patient ?l1 ?l2 - location)
+        :task (accompany_patient_to_unit ?p ?u)
         :precondition (and
-            (at ?u ?to)
-            (robot-has-carrier ?r ?cr)
-            (unit-needs-content ?u ?c)
-            (empty ?b)
-            (exists (?w - location)
-                (and
-                    (is-central_warehouse ?w)
-                    (content-available ?c ?w)
-                )
-            )
+            (at ?p ?l1)
+            (at ?u ?l2)
+            (patient_needs_unit ?p ?u)
+            (robot_patient_empty ?r)
         )
         :subtasks (and
-            (task0 (navigate-robot ?r ?from)) ; move robot to warehouse
-            (task1 (fill-box ?r ?cr ?b ?c ?from)) ; fill box with content
-            (task2 (load-box-carrier ?r ?b ?cr ?from ?current ?next ?max)) ; load box in carrier
-            (task3 (navigate-robot ?r ?to)) ; move robot to unit
-            (task4 (deliver-content ?r ?cr ?b ?u ?c ?to ?next ?prev)) ; deliver content to unit
+            (task0 (navigate_robot_patient ?r ?l1))     ; move robot to patient
+            (task1 (pick_up_patient ?r ?p ?l1))         ; pick up patient
+            (task2 (navigate_robot_patient ?r ?l2))     ; move robot to unit
+            (task3 (drop_off_patient ?r ?p ?l2))        ; drop off patient
+            (task4 (deliver_patient ?r ?p ?l2 ?u))      ; deliver patient to unit
+        )
+        :ordering (and
+            (task0 < task1) (task1 < task2) (task2 < task3) (task3 < task4)
+        )
+    )
+
+    ; Deliver one supply to unit
+    (:method m_deliver_supply_one
+        :parameters (?s - supply ?u - medical_unit ?r - robot_box ?c - carrier ?b - box ?l1 ?l2 - location)
+        :task (deliver_supply_to_unit ?s ?u)
+        :precondition (and
+            (at ?s ?l1)
+            (at ?u ?l2)
+            (unit_needs_supply ?u ?s)
+            (carrier_empty ?c)
+            (has_capacity_one ?c)
+            (empty ?b)
+        )
+        :subtasks (and
+            (task0 (navigate_carrier ?r ?c ?l1))        ; move robot to where the supply is (warehouse)
+            (task1 (fill_box ?r ?b ?l1 ?s))             ; fill the box with the supply
+            (task2 (load_first_box ?r ?c ?b ?l1))       ; load the box into the carrier
+            (task3 (navigate_carrier ?r ?c ?l2))        ; move the carrier to the unit
+            (task4 (unload_one_box ?r ?c ?b ?l2))       ; unload the box at the unit
+            (task5 (deliver_supply ?r ?b ?l2 ?s ?u))    ; deliver the supply to the unit
         )
         :ordering (and
             (task0 < task1)
             (task1 < task2)
             (task2 < task3)
             (task3 < task4)
+            (task4 < task5)
         )
     )
 
-    ; Navigation Methods
-    ; separate methods for robot-box and robot-patient to avoid unnecessary checks
-
-    (:method m-navigate-robot-box
-        :parameters (?r - robot-box ?cr - carrier ?from ?to - location)
-        :task (navigate-robot ?r ?to)
+    ; When carrier has one box, add another supply and deliver to unit
+    (:method m_deliver_supply_add_to_one
+        :parameters (?s - supply ?u - medical_unit ?r - robot_box ?c - carrier 
+                    ?b - box ?b_loaded - box ?l1 ?l2 - location)
+        :task (deliver_supply_to_unit ?s ?u)
         :precondition (and
-            (connected ?from ?to)
-            (robot-has-carrier ?r ?cr)
-            (at ?r ?from)
-            (not (= ?from ?to))
-        )
-        :subtasks(and
-            (task0 (move-robot-box ?r ?cr ?from ?to))
-        )
-    )
-
-    (:method m-navigate-robot-patient
-        :parameters (?r - robot-patient ?from ?to - location)
-        :task (navigate-robot ?r ?to)
-        :precondition (and
-            (connected ?from ?to)
-            (at ?r ?from)
-            (not (= ?from ?to))
-        )
-        :subtasks(and
-            (task0 (move-robot-patient ?r ?from ?to))
-        )
-    )
-
-    (:method m-navigate-robot-box-via
-        :parameters (?r - robot-box ?cr - carrier ?from ?via ?to - location)
-        :task (navigate-robot ?r ?to)
-        :precondition (and
-            (connected ?from ?via)
-            (robot-has-carrier ?r ?cr)
-            (at ?r ?from)
-            (not (= ?from ?to))
-            (not (= ?via ?to))
-            (not (= ?from ?via))
-        )
-        :subtasks (and
-            (task0 (move-robot-box ?r ?cr ?from ?via))
-            (task1 (navigate-robot ?r ?to))
-        )
-        :ordering (and
-            (task0 < task1)
-        )
-    )
-
-    (:method m-navigate-robot-patient-via
-        :parameters (?r - robot-patient ?from ?via ?to - location)
-        :task (navigate-robot ?r ?to)
-        :precondition (and
-            (connected ?from ?via)
-            (at ?r ?from)
-            (not (= ?from ?to))
-            (not (= ?via ?to))
-            (not (= ?from ?via))
-        )
-        :subtasks (and
-            (task0 (move-robot-patient ?r ?from ?via))
-            (task1 (navigate-robot ?r ?to))
-        )
-        :ordering (and
-            (task0 < task1)
-        )
-    )
-
-    (:method m-robot-box-is-there
-        :parameters (?r - robot-box ?cr - carrier ?to - location)
-        :task (navigate-robot ?r ?to)
-        :precondition (and
-            (at ?r ?to)
-            (robot-has-carrier ?r ?cr)
-        )
-        :subtasks()
-    )
-
-    (:method m-robot-patient-is-there
-        :parameters (?r - robot-patient ?to - location)
-        :task (navigate-robot ?r ?to)
-        :precondition (and
-            (at ?r ?to)
-        )
-        :subtasks()
-    )
-
-    ; Accompany Patient Method
-
-    (:method m-accompany-patient
-        :parameters (?p - patient ?u - medical-unit ?r - robot-patient ?from ?to - location)
-        :task (accompany-patient ?p ?u)
-        :precondition (and
-            (at ?u ?to)
-            (patient-needs-unit ?p ?u)
-        )
-        :subtasks (and
-            (task0 (navigate-robot ?r ?from)) ; move robot to patient
-            (task1 (pick-up-patient ?r ?p ?from)) ; pick up patient
-            (task2 (navigate-robot ?r ?to)) ; move robot to unit
-            (task3 (deliver-patient ?r ?p ?u ?to)) ; deliver patient to unit
-        )
-        :ordering (and
-            (task0 < task1)
-            (task1 < task2)
-            (task2 < task3)
-        )
-    )
-
-    ; Primitive Actions
-      (:action load-box-carrier
-        :parameters (?r - robot-box ?b - box ?c - carrier ?l - location ?current ?next ?max - capacity-num)
-        :precondition (and
-            (at ?r ?l)
-            (at ?b ?l)
-            (robot-has-carrier ?r ?c)
-            
-            (or
-                (not (is-central_warehouse ?l)) 
-                (not (empty ?b))
-            )
-
-            (carrier-current-capacity ?c ?current)
-            (next-capacity ?current ?next)
-            (carrier-has-capacity ?c ?max) 
-
-            (not (next-capacity ?current ?max)) 
-        )
-        :effect (and
-            (box-in-carrier ?b ?c)
-            (not (carrier-current-capacity ?c ?current))
-            (carrier-current-capacity ?c ?next)
-        )
-    )
-
-
-    (:action fill-box
-        :parameters (?r - robot-box ?cr - carrier ?b - box ?c - content ?l - location)
-        :precondition (and
-            (at ?r ?l)
-            (at ?b ?l)
-            (robot-has-carrier ?r ?cr)
+            (at ?s ?l1)
+            (at ?u ?l2)
+            (unit_needs_supply ?u ?s)
+            (has_one_box ?c)
+            (has_capacity_two ?c)
             (empty ?b)
-            (content-available ?c ?l)
-
-            (or
-                (box-in-carrier ?b ?cr) 
-                (not (exists (?cr2 - carrier) (box-in-carrier ?b ?cr2))) 
-            )
+            (box_loaded_in_carrier ?b_loaded ?c)
         )
-        :effect (and
-            (not (empty ?b))
-            (box-has-content ?b ?c)
-            (not (content-available ?c ?l)) 
+        :subtasks (and
+            (task0 (navigate_carrier ?r ?c ?l1))
+            (task1 (fill_box ?r ?b ?l1 ?s))
+            (task2 (load_second_box ?r ?c ?b ?b_loaded ?l1))
+            (task3 (navigate_carrier ?r ?c ?l2))
+            (task4 (unload_from_two ?r ?c ?b ?l2))
+            (task5 (deliver_supply ?r ?b ?l2 ?s ?u))
+        )
+        :ordering (and
+            (task0 < task1) (task1 < task2) (task2 < task3)
+            (task3 < task4) (task4 < task5)
         )
     )
 
-    (:action move-robot-box
-        :parameters (?r - robot-box ?cr - carrier ?from - location ?to - location)
+    ; When carrier has two boxes, add another supply and deliver to unit
+    (:method m_deliver_supply_add_to_two
+        :parameters (?s - supply ?u - medical_unit ?r - robot_box ?c - carrier 
+                    ?b - box ?b_loaded1 ?b_loaded2 - box ?l1 ?l2 - location)
+        :task (deliver_supply_to_unit ?s ?u)
         :precondition (and
-            (at ?r ?from)
-            (connected ?from ?to)
-            (not (= ?from ?to))
-            (robot-has-carrier ?r ?cr)
-
-            (or
-                (not (is-central_warehouse ?to)) 
-                (and 
-                    (is-central_warehouse ?to)
-                    (not (exists (?b - box)
-                        (and 
-                            (box-in-carrier ?b ?cr)
-                            (not (empty ?b))
-                        )    
-                    ))
-                )
-            )
+            (at ?s ?l1)
+            (at ?u ?l2)
+            (unit_needs_supply ?u ?s)
+            (has_two_boxes ?c)
+            (has_capacity_three ?c)
+            (empty ?b)
+            (box_loaded_in_carrier ?b_loaded1 ?c)
+            (box_loaded_in_carrier ?b_loaded2 ?c)
         )
-        :effect (and
-            (at ?r ?to)
-            (not (at ?r ?from))
-
-            (forall
-                (?b - box)
-                (when
-                    (box-in-carrier ?b ?cr)
-                    (and
-                        (at ?b ?to)
-                        (not (at ?b ?from))
-                    )
-                )
-            )
+        :subtasks (and
+            (task0 (navigate_carrier ?r ?c ?l1))
+            (task1 (fill_box ?r ?b ?l1 ?s))
+            (task2 (load_third_box ?r ?c ?b ?b_loaded1 ?b_loaded2 ?l1))
+            (task3 (navigate_carrier ?r ?c ?l2))
+            (task4 (unload_from_three ?r ?c ?b ?l2))
+            (task5 (deliver_supply ?r ?b ?l2 ?s ?u))
+        )
+        :ordering (and
+            (task0 < task1) (task1 < task2) (task2 < task3)
+            (task3 < task4) (task4 < task5)
         )
     )
 
-    (:action deliver-content
-        :parameters (?r - robot-box ?cr - carrier ?b - box ?u - medical-unit ?c - content ?l - location ?current ?prev - capacity-num)
+    ; Move empty robot_patient to location (direct and via methods)
+    (:method m_navigate_empty_robot_patient_direct
+        :parameters (?r - robot_patient ?l1 ?l2 - location)
+        :task (navigate_robot_patient ?r ?l2)
+        :precondition (and
+            (at ?r ?l1)
+            (robot_patient_empty ?r)
+            (connected ?l1 ?l2)
+        )
+        :subtasks (and
+            (task0 (move_empty_robot_patient ?r ?l1 ?l2))
+        )
+    )
+
+    (:method m_navigate_empty_robot_patient_via
+        :parameters (?r - robot_patient ?l1 ?l2 ?l3 - location)
+        :task (navigate_robot_patient ?r ?l3)
+        :precondition (and
+            (at ?r ?l1)
+            (robot_patient_empty ?r)
+            (connected ?l1 ?l2)
+        )
+        :subtasks (and
+            (task0 (move_empty_robot_patient ?r ?l1 ?l2))
+            (task1 (navigate_robot_patient ?r ?l3))
+        )
+        :ordering (and
+            (task0 < task1)
+        )
+    )
+
+    ; Check if robot_patient is already at location
+    (:method m_robot_patient_is_already_there
+        :parameters (?r - robot_patient ?l - location)
+        :task (navigate_robot_patient ?r ?l)
         :precondition (and
             (at ?r ?l)
+        )
+        :subtasks ()
+    )
+
+    ; Move robot_patient with patient to location (direct and via methods)
+    (:method m_navigate_robot_patient_direct
+        :parameters (?r - robot_patient ?p - patient ?l1 ?l2 - location)
+        :task (navigate_robot_patient ?r ?l2)
+        :precondition (and
+            (at ?r ?l1)
+            (at ?p ?l1)
+            (patient_loaded_in_robot ?p ?r)
+            (connected ?l1 ?l2)
+        )
+        :subtasks (and
+            (task0 (move_robot_with_patient ?r ?p ?l1 ?l2))
+        )
+    )
+
+    (:method m_navigate_robot_patient_via
+        :parameters (?r - robot_patient ?p - patient ?l1 ?l2 ?l3 - location)
+        :task (navigate_robot_patient ?r ?l3)
+        :precondition (and
+            (at ?r ?l1)
+            (at ?p ?l1)
+            (patient_loaded_in_robot ?p ?r)
+            (connected ?l1 ?l2)
+        )
+        :subtasks (and
+            (task0 (move_robot_with_patient ?r ?p ?l1 ?l2))
+            (task1 (navigate_robot_patient ?r ?l3))
+        )
+        :ordering (and
+            (task0 < task1)
+        )
+    )
+    
+
+    ; Move empty carrier to location (direct and via methods)
+
+    (:method m_navigate_empty_carrier_direct
+        :parameters (?r - robot_box ?c - carrier ?l1 ?l2 - location)
+        :task (navigate_carrier ?r ?c ?l2)
+        :precondition (and
+            (at ?r ?l1)
+            (at ?c ?l1)
+            (connected ?l1 ?l2)
+            (carrier_empty ?c)
+        )
+        :subtasks (and
+            (task0 (move_empty_carrier ?r ?c ?l1 ?l2))
+        )
+    )
+
+    (:method m_navigate_empty_carrier_via
+        :parameters (?r - robot_box ?c - carrier ?l1 ?l2 ?l3 - location)
+        :task (navigate_carrier ?r ?c ?l3)
+        :precondition (and
+            (at ?r ?l1)
+            (at ?c ?l1)
+            (connected ?l1 ?l2)
+            (carrier_empty ?c)
+        )
+        :subtasks (and
+            (task0 (move_empty_carrier ?r ?c ?l1 ?l2))
+            (task1 (navigate_carrier ?r ?c ?l3))
+        )
+        :ordering (and
+            (task0 < task1)
+        )
+    )
+
+    ; Check if carrier is already at location
+    (:method m_carrier_is_already_there
+        :parameters (?r - robot_box ?c - carrier ?l - location)
+        :task (navigate_carrier ?r ?c ?l)
+        :precondition (and
+            (at ?r ?l)
+            (at ?c ?l)
+        )
+        :subtasks ()
+    )
+
+    ; Move carrier to location
+    ; implement for 1, 2, 3 boxes (direct and via methods) - can be easily extended to more boxes
+
+    (:method m_navigate_carrier_1_direct
+        :parameters (?r - robot_box ?c - carrier ?b - box ?l1 ?l2 - location)
+        :task (navigate_carrier ?r ?c ?l2)
+        :precondition (and
+            (at ?r ?l1)
+            (at ?c ?l1)
+            (has_one_box ?c)
+            (connected ?l1 ?l2)
+            (box_loaded_in_carrier ?b ?c)
+        )
+        :subtasks (and
+            (task0 (move_carrier_one_box ?r ?c ?b ?l1 ?l2))
+        )
+    ) 
+
+    (:method m_navigate_carrier_1_via
+        :parameters (?r - robot_box ?c - carrier ?b - box ?l1 ?l2 ?l3 - location)
+        :task (navigate_carrier ?r ?c ?l3)
+        :precondition (and
+            (at ?r ?l1)
+            (at ?c ?l1)
+            (has_one_box ?c)
+            (connected ?l1 ?l2)
+            (box_loaded_in_carrier ?b ?c)
+        )
+        :subtasks (and
+            (task0 (move_carrier_one_box ?r ?c ?b ?l1 ?l2))
+            (task1 (navigate_carrier ?r ?c ?l3))
+        )
+        :ordering (and
+            (task0 < task1)
+        )
+    )
+
+    (:method m_navigate_carrier_2_direct
+        :parameters (?r - robot_box ?c - carrier ?b1 - box ?b2 - box ?l1 ?l2 - location)
+        :task (navigate_carrier ?r ?c ?l2)
+        :precondition (and
+            (at ?r ?l1)
+            (at ?c ?l1)
+            (has_two_boxes ?c)
+            (connected ?l1 ?l2)
+            (box_loaded_in_carrier ?b1 ?c)
+            (box_loaded_in_carrier ?b2 ?c)
+        )
+        :subtasks (and
+            (task0 (move_carrier_two_boxes ?r ?c ?b1 ?b2 ?l1 ?l2))
+        )
+    )
+
+    (:method m_navigate_carrier_2_via
+        :parameters (?r - robot_box ?c - carrier ?b1 - box ?b2 - box ?l1 ?l2 ?l3 - location)
+        :task (navigate_carrier ?r ?c ?l3)
+        :precondition (and
+            (at ?r ?l1)
+            (at ?c ?l1)
+            (has_two_boxes ?c)
+            (connected ?l1 ?l2)
+            (box_loaded_in_carrier ?b1 ?c)
+            (box_loaded_in_carrier ?b2 ?c)
+        )
+        :subtasks (and
+            (task0 (move_carrier_two_boxes ?r ?c ?b1 ?b2 ?l1 ?l2))
+            (task1 (navigate_carrier ?r ?c ?l3))
+        )
+        :ordering (and
+            (task0 < task1)
+        )
+    )
+
+    (:method m_navigate_carrier_3_direct
+        :parameters (?r - robot_box ?c - carrier ?b1 - box ?b2 - box ?b3 - box ?l1 ?l2 - location)
+        :task (navigate_carrier ?r ?c ?l2)
+        :precondition (and
+            (at ?r ?l1)
+            (at ?c ?l1)
+            (has_three_boxes ?c)
+            (connected ?l1 ?l2)
+            (box_loaded_in_carrier ?b1 ?c)
+            (box_loaded_in_carrier ?b2 ?c)
+            (box_loaded_in_carrier ?b3 ?c)
+        )
+        :subtasks (and
+            (task0 (move_carrier_three_boxes ?r ?c ?b1 ?b2 ?b3 ?l1 ?l2))
+        )
+    )
+
+    (:method m_navigate_carrier_3_via
+        :parameters (?r - robot_box ?c - carrier ?b1 - box ?b2 - box ?b3 - box ?l1 ?l2 ?l3 - location)
+        :task (navigate_carrier ?r ?c ?l3)
+        :precondition (and
+            (at ?r ?l1)
+            (at ?c ?l1)
+            (has_three_boxes ?c)
+            (connected ?l1 ?l2)
+            (box_loaded_in_carrier ?b1 ?c)
+            (box_loaded_in_carrier ?b2 ?c)
+            (box_loaded_in_carrier ?b3 ?c)
+        )
+        :subtasks (and
+            (task0 (move_carrier_three_boxes ?r ?c ?b1 ?b2 ?b3 ?l1 ?l2))
+            (task1 (navigate_carrier ?r ?c ?l3))
+        )
+        :ordering (and
+            (task0 < task1)
+        )
+    )
+
+    
+    
+
+    ; Primitive Actions 
+    
+    ; Fill box with supply
+    (:action fill_box
+        :parameters (?r - robot_box ?b - box ?l - location ?s - supply)
+        :precondition (and
+            (at ?r ?l)
+            (at ?b ?l)
+            (at ?s ?l)
+            (box_unloaded ?b)
+            (empty ?b)
+        )
+        :effect (and 
+            (not (empty ?b))
+            (box_has_supply ?b ?s)
+        )
+    )
+
+    ; Deliver supply to unit
+    (:action deliver_supply
+        :parameters (?r - robot_box ?b - box ?l - location ?s - supply ?u - medical_unit)
+        :precondition (and
+            (at ?r ?l)
+            (at ?b ?l)
             (at ?u ?l)
-            (robot-has-carrier ?r ?cr)
-
-            (box-in-carrier ?b ?cr)
-            (box-has-content ?b ?c)
-            
-            (unit-needs-content ?u ?c) 
-
-            (carrier-current-capacity ?cr ?current)
-            (next-capacity ?prev ?current)
-            
-            (not (empty ?b))
+            (box_has_supply ?b ?s)
+            (box_unloaded ?b)
+            (unit_needs_supply ?u ?s)
         )
         :effect (and
-            (unit-has-content ?u ?c)
-            (not (unit-needs-content ?u ?c))
-            (not (box-has-content ?b ?c))
-            (not (box-in-carrier ?b ?cr)) 
-
+            (not (box_has_supply ?b ?s))
             (empty ?b)
-            
-            (not (carrier-current-capacity ?cr ?current))
-            (carrier-current-capacity ?cr ?prev)
+            (not (unit_needs_supply ?u ?s))
+            (unit_has_supply ?u ?s)
         )
     )
 
-    (:action pick-up-patient
-        :parameters (?r - robot-patient ?p - patient ?l - location)
+    ; Pick up patient
+    (:action pick_up_patient
+        :parameters (?r - robot_patient ?p - patient ?l - location)
         :precondition (and
             (at ?r ?l)
             (at ?p ?l)
             
-            (not (exists
-                    (?p2 - patient)
-                    (robot-has-patient ?r ?p2)))
-
-            (not (exists
-                    (?r2 - robot-patient)
-                    (robot-has-patient ?r2 ?p)))
+            (patient_unloaded ?p)
+            (robot_patient_empty ?r)
         )
-        :effect (and
-            (robot-has-patient ?r ?p)
+        :effect (and 
+            (not (patient_unloaded ?p))
+            (patient_loaded_in_robot ?p ?r)
+            (not (robot_patient_empty ?r))
         )
     )
 
-    (:action move-robot-patient
-        :parameters (?r - robot-patient ?from - location ?to - location)
+    ; Drop off patient
+    (:action drop_off_patient
+        :parameters (?r - robot_patient ?p - patient ?l - location)
         :precondition (and
-            (at ?r ?from)
-            (connected ?from ?to)
+            (at ?r ?l)
+            (at ?p ?l)
+            (patient_loaded_in_robot ?p ?r)
         )
-        :effect (and
-            (at ?r ?to)
-            (not (at ?r ?from))
-            
-            (forall
-                (?p - patient)
-                (when
-                    (robot-has-patient ?r ?p)
-                    (and
-                        (at ?p ?to)
-                        (not (at ?p ?from))
-                    )
-                )
-            )
-        )
+        :effect (and 
+            (patient_unloaded ?p)
+            (not (patient_loaded_in_robot ?p ?r))
+            (robot_patient_empty ?r)
+            (at ?p ?l)
+         )
     )
 
-    (:action deliver-patient
-        :parameters (?r - robot-patient ?p - patient ?u - medical-unit ?l - location)
+    ; Deliver patient to unit
+    (:action deliver_patient
+        :parameters (?r - robot_patient ?p - patient ?l - location ?u - medical_unit)
         :precondition (and
             (at ?r ?l)
             (at ?p ?l)
             (at ?u ?l)
-            (patient-needs-unit ?p ?u)
-            (robot-has-patient ?r ?p)
+
+            (patient_unloaded ?p)
+            (patient_needs_unit ?p ?u)
         )
         :effect (and
-            (patient-at-unit ?p ?u)
-            (not (patient-needs-unit ?p ?u))
-            (not (robot-has-patient ?r ?p))
+            (not (patient_needs_unit ?p ?u))
+            (patient_at_unit ?p ?u)
         )
+    )
+
+
+    ; Movement Patients
+
+    (:action move_empty_robot_patient
+        :parameters (?r - robot_patient ?l1 - location ?l2 - location)
+        :precondition (and
+            (at ?r ?l1)
+            (connected ?l1 ?l2)
+            (robot_patient_empty ?r)
+        )
+        :effect (and 
+            (not (at ?r ?l1))
+            (at ?r ?l2)
+        )
+    )
+
+    (:action move_robot_with_patient
+        :parameters (?r - robot_patient ?p - patient ?l1 - location ?l2 - location)
+        :precondition (and
+            (at ?r ?l1)
+            (connected ?l1 ?l2)
+            (patient_loaded_in_robot ?p ?r)
+        )
+        :effect (and 
+            (not (at ?r ?l1))
+            (not (at ?p ?l1))
+            (at ?r ?l2)
+            (at ?p ?l2)
+        )
+    )
+
+    ; Load operations
+    (:action load_first_box
+        :parameters (?r - robot_box ?c - carrier ?b - box ?l - location)
+        :precondition (and
+            (at ?r ?l)
+            (at ?c ?l)
+            (at ?b ?l)
+            (box_unloaded ?b)
+            (carrier_empty ?c)
+            (has_capacity_one ?c)
+        )
+        :effect (and 
+            (not (box_unloaded ?b))
+            (box_loaded_in_carrier ?b ?c)
+            (not (carrier_empty ?c))
+            (has_one_box ?c)
+        )
+    )
+
+    (:action load_second_box
+        :parameters (?r - robot_box ?c - carrier ?b - box ?lb1 - box ?l - location)
+        :precondition (and
+            (at ?r ?l)
+            (at ?c ?l)
+            (at ?b ?l)
+            (box_unloaded ?b)
+            (has_one_box ?c)
+            (has_capacity_two ?c)
+            (box_loaded_in_carrier ?lb1 ?c)
+        )
+        :effect (and 
+            (not (box_unloaded ?b))
+            (box_loaded_in_carrier ?b ?c)
+            (not (has_one_box ?c))
+            (has_two_boxes ?c)
+        )
+    )
+
+    (:action load_third_box
+        :parameters (?r - robot_box ?c - carrier ?b - box  ?lb1 ?lb2 - box ?l - location)
+        :precondition (and
+            (at ?r ?l)
+            (at ?c ?l)
+            (at ?b ?l)
+            (box_unloaded ?b)
+            (has_two_boxes ?c)
+            (has_capacity_three ?c)
+            (box_loaded_in_carrier ?lb1 ?c)
+            (box_loaded_in_carrier ?lb2 ?c)
+        )
+        :effect (and 
+            (not (box_unloaded ?b))
+            (box_loaded_in_carrier ?b ?c)
+            (not (has_two_boxes ?c))
+            (has_three_boxes ?c)
+       )
+    )
+
+    ; Unload operations
+    (:action unload_one_box
+        :parameters (?r - robot_box ?c - carrier ?b - box ?l - location)
+        :precondition (and
+            (at ?r ?l)
+            (at ?c ?l)
+            (box_loaded_in_carrier ?b ?c)
+            (has_one_box ?c)
+        )
+        :effect (and 
+            (box_unloaded ?b)
+            (not (box_loaded_in_carrier ?b ?c))
+            (not (has_one_box ?c))
+            (carrier_empty ?c)
+            (at ?b ?l)
+         )
+    )
+
+    (:action unload_from_two
+        :parameters (?r - robot_box ?c - carrier ?b - box ?l - location)
+        :precondition (and
+            (at ?r ?l)
+            (at ?c ?l)
+            (box_loaded_in_carrier ?b ?c)
+            (has_two_boxes ?c)
+        )
+        :effect (and 
+            (box_unloaded ?b)
+            (not (box_loaded_in_carrier ?b ?c))
+            (not (has_two_boxes ?c))
+            (has_one_box ?c)
+            (at ?b ?l)
+         )
+    )
+
+    (:action unload_from_three
+        :parameters (?r - robot_box ?c - carrier ?b - box ?l - location)
+        :precondition (and
+            (at ?r ?l)
+            (at ?c ?l)
+            (box_loaded_in_carrier ?b ?c)
+            (has_three_boxes ?c)
+        )
+        :effect (and 
+            (box_unloaded ?b)
+            (not (box_loaded_in_carrier ?b ?c))
+            (not (has_three_boxes ?c))
+            (has_two_boxes ?c)
+            (at ?b ?l)
+        )
+    )
+
+    ; Movement operations
+
+    (:action move_empty_carrier
+        :parameters (?r - robot_box ?c - carrier ?l1 - location ?l2 - location)
+        :precondition (and
+            (at ?r ?l1)
+            (at ?c ?l1)
+            (connected ?l1 ?l2)
+            (carrier_empty ?c)
+        )
+        :effect (and 
+            (not (at ?r ?l1))
+            (not (at ?c ?l1))
+            (at ?r ?l2)
+            (at ?c ?l2)
+        )
+    )
+
+    (:action move_carrier_one_box
+        :parameters (?r - robot_box ?c - carrier ?b - box ?l1 - location ?l2 - location)
+        :precondition (and
+            (at ?r ?l1)
+            (at ?c ?l1)
+            (connected ?l1 ?l2)
+            (has_one_box ?c)
+            (box_loaded_in_carrier ?b ?c)
+        )
+        :effect (and 
+            (not (at ?r ?l1))
+            (not (at ?c ?l1))
+            (not (at ?b ?l1))
+            (at ?r ?l2)
+            (at ?c ?l2)
+            (at ?b ?l2)
+        )
+    )
+
+    (:action move_carrier_two_boxes
+        :parameters (?r - robot_box ?c - carrier ?b1 - box ?b2 - box ?l1 - location ?l2 - location)
+        :precondition (and
+            (at ?r ?l1)
+            (at ?c ?l1)
+            (connected ?l1 ?l2)
+            (has_two_boxes ?c)
+            (box_loaded_in_carrier ?b1 ?c)
+            (box_loaded_in_carrier ?b2 ?c)
+        )
+        :effect (and 
+            (not (at ?r ?l1))
+            (not (at ?c ?l1))
+            (not (at ?b1 ?l1))
+            (not (at ?b2 ?l1))
+            (at ?r ?l2)
+            (at ?c ?l2)
+            (at ?b1 ?l2)
+            (at ?b2 ?l2)
+        )
+    )
+
+    (:action move_carrier_three_boxes
+        :parameters (?r - robot_box ?c - carrier ?b1 - box ?b2 - box ?b3 - box ?l1 - location ?l2 - location)
+        :precondition (and
+            (at ?r ?l1)
+            (at ?c ?l1)
+            (connected ?l1 ?l2)
+            (has_three_boxes ?c)
+            (box_loaded_in_carrier ?b1 ?c)
+            (box_loaded_in_carrier ?b2 ?c)
+            (box_loaded_in_carrier ?b3 ?c)
+        )
+        :effect (and 
+            (not (at ?r ?l1))
+            (not (at ?c ?l1))
+            (not (at ?b1 ?l1))
+            (not (at ?b2 ?l1))
+            (not (at ?b3 ?l1))
+            (at ?r ?l2)
+            (at ?c ?l2)
+            (at ?b1 ?l2)
+            (at ?b2 ?l2)
+            (at ?b3 ?l2)
+          )
     )
 )
