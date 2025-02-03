@@ -7,9 +7,9 @@
         emergency_area surgical_area clinic_area 
         - location
         
-        robot1 - robot_box
+        robot_box_1 - robot_box
         
-        robot2 - robot_patient
+        robot_patient_1 - robot_patient
         
         box1 box2 box3 box4 - box
         
@@ -36,8 +36,8 @@
         (connected central_warehouse secondary_corridor)
 
         ; Initial locations
-        (at robot1 central_warehouse) ; single robotic agent allowed to carry boxes is located at the central_warehouse to deliver boxes
-        (at robot2 entrance) ; single robotic agent allowed to accompany patients is initially located at the entrance
+        (at robot_box_1 central_warehouse) ; single robotic agent allowed to carry boxes is located at the central_warehouse to deliver boxes
+        (at robot_patient_1 entrance) ; single robotic agent allowed to accompany patients is initially located at the entrance
         ; Box locations: all boxes are located at a single location : central_warehouse
         (at box1 central_warehouse)
         (at box2 central_warehouse)
@@ -75,8 +75,8 @@
         (empty box4)
 
         ; Initial robot states
-        (robot_patient_empty robot2)
-        (robot_box_empty robot1)
+        (robot_patient_empty robot_patient_1)
+        (robot_box_empty robot_box_1)
 
         ; Initial patient states
         (patient_unloaded patient1)
@@ -116,10 +116,10 @@
             
             ; Final state requirements
             ; robots are at the central warehouse and empty
-            (at robot1 central_warehouse)
-            (at robot2 central_warehouse)
-            (robot_box_empty robot1)
-            (robot_patient_empty robot2)
+            (at robot_box_1 central_warehouse)
+            (at robot_patient_1 central_warehouse)
+            (robot_box_empty robot_box_1)
+            (robot_patient_empty robot_patient_1)
             ; all boxes are empty, unloaded and located at the central warehouse
             (empty box1)
             (empty box2)
