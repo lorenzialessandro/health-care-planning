@@ -1,90 +1,138 @@
 (define (problem healthcare_htn_p1)
     (:domain healthcare_htn)
     (:objects
-        warehouse loc1 loc2 loc3 - location
-        unit1 unit2 unit3 - medical_unit
-        supply1 supply2 supply3 - supply
-        box1 box2 box3 - box
-        patient1 patient2 - patient
-        robot1 - robot_box
-        robot2 - robot_patient
-        carrier1 - carrier
+        entrance central_warehouse
+        main_corridor secondary_corridor
+        emergency_area surgical_area clinic_area 
+        - location
+        
+        robot_box_1 robot_box_2 - robot_box
+        carrier1 carrier2 - carrier
+        
+        robot_patient_1 - robot_patient
+        
+        box1 box2 box3 box4 - box
+        
+        scalpel aspirine tongue bandage antibiotic tank anesthesia - supply
+
+        trauma_unit triage_unit operation_unit cardiology_unit neurology_unit - medical_unit
+        
+        patient1 patient2 patient3 - patient
     )
 
     (:htn
         :parameters ()
         :subtasks (and
-            (task0 (deliver_supply_to_unit supply1 unit1))
-            (task1 (deliver_supply_to_unit supply2 unit2))
-            (task2 (deliver_supply_to_unit supply3 unit3))
+            (task0 (deliver_supply_to_unit scalpel trauma_unit))
+            (task1 (deliver_supply_to_unit aspirine trauma_unit))
+            (task2 (deliver_supply_to_unit tongue triage_unit))
+            (task3 (deliver_supply_to_unit antibiotic operation_unit))
+            (task4 (deliver_supply_to_unit tank operation_unit))
+            (task5 (deliver_supply_to_unit bandage cardiology_unit))
+            (task6 (deliver_supply_to_unit anesthesia neurology_unit))
 
-            (task3 (accompany_patient_to_unit patient1 unit3))
-            (task4 (accompany_patient_to_unit patient2 unit1))
+            (task7 (accompany_patient_to_unit patient1 trauma_unit))
+            (task8 (accompany_patient_to_unit patient2 triage_unit))
+            (task9 (accompany_patient_to_unit patient3 operation_unit))
         )
         :ordering (and
-            (task0 < task1)
-            (task1 < task2)
-            (task2 < task3)
-            (task3 < task4)
+            (task0 < task1) (task1 < task2) (task2 < task3)
+            (task3 < task4) (task4 < task5) (task5 < task6)
+            (task6 < task7) (task7 < task8) (task8 < task9)
         )
     )
 
     (:init
-        ; Location connections
-        (connected warehouse loc1)
-        (connected loc1 warehouse)
-        (connected loc1 loc2)
-        (connected loc2 loc1)
-        (connected loc2 loc3)
-        (connected loc3 loc2)
+        ; Location connections 
+        (connected entrance main_corridor)
+        (connected main_corridor entrance)
+        (connected main_corridor emergency_area)
+        (connected emergency_area main_corridor)
+        (connected main_corridor surgical_area)
+        (connected surgical_area main_corridor)
+        (connected main_corridor secondary_corridor)
+        (connected secondary_corridor main_corridor)
+        (connected secondary_corridor clinic_area)
+        (connected clinic_area secondary_corridor)
+        (connected secondary_corridor central_warehouse)
+        (connected central_warehouse secondary_corridor)
         
         ; Initial locations
-        (at robot1 warehouse)
-        (at carrier1 warehouse)
-        (at robot2 warehouse)
-        (at box1 warehouse)
-        (at box2 warehouse)
-        (at box3 warehouse)
-        (at supply1 warehouse)
-        (at supply2 warehouse)
-        (at supply3 warehouse)
-        (at patient1 loc1)
-        (at patient2 loc2)
+        (at robot_box_1 central_warehouse)  ; robotic agent allowed to carry boxes is located at the central_warehouse to deliver boxes
+        (at robot_box_2 central_warehouse)  ; robotic agent allowed to carry boxes is located at the central_warehouse to deliver boxes
+        (at carrier1 central_warehouse)     ; carrier1 is located at the central warehouse
+        (at carrier2 central_warehouse)     ; carrier2 is located at the central warehouse
+        (at robot_patient_1 entrance)       ; single robotic agent allowed to accompany patients is initially located at the entrance
+        ; Box locations: all boxes are located at a single location : central_warehouse
+        (at box1 central_warehouse)
+        (at box2 central_warehouse)
+        (at box3 central_warehouse)
+        (at box4 central_warehouse)
+        ; Supplies location: all supplies are located at a single location : central_warehouse
+        (at scalpel central_warehouse)
+        (at aspirine central_warehouse)
+        (at tongue central_warehouse)
+        (at bandage central_warehouse)
+        (at antibiotic central_warehouse)
+        (at tank central_warehouse)
+        (at anesthesia central_warehouse)
 
+        ; All the patients are at the entrance
+        (at patient1 entrance)
+        (at patient2 entrance)
+        (at patient3 entrance)
         
-        ; Unit locations
-        (at unit1 loc1)
-        (at unit2 loc2)
-        (at unit3 loc3)
-        
+        ; Medical units locations (no units are located at the central warehouse)
+        (at trauma_unit emergency_area)
+        (at triage_unit emergency_area)
+        (at operation_unit surgical_area)
+        (at cardiology_unit clinic_area)
+        (at neurology_unit clinic_area)
+
         ; Initial box states
         (box_unloaded box1)
         (box_unloaded box2)
         (box_unloaded box3)
+        (box_unloaded box4)
         (empty box1)
         (empty box2)
         (empty box3)
+        (empty box4)
+
+        ; Initial carrier state
+        (carrier_empty carrier1)
+        (carrier_empty carrier2)
+        
+        (has_capacity_one carrier1) (has_capacity_two carrier1) (has_capacity_three carrier1)   ; carrier1 has capacity for max 3 boxes
+        (has_capacity_one carrier2) (has_capacity_two carrier2)                                 ; carrier2 has capacity for max 2 boxes
+
+        ; Initial robot box states
+        ; each robotic agent has a carrier with a maximum load capacity (that might be different from each agent)
+        (robot_has_carrier robot_box_1 carrier1)
+        (robot_has_carrier robot_box_2 carrier2) 
+
+        ; Initial robot states
+        (robot_patient_empty robot_patient_1)
 
         ; Initial patient states
         (patient_unloaded patient1)
         (patient_unloaded patient2)
+        (patient_unloaded patient3)
         
-        ; Initial carrier state
-        (carrier_empty carrier1)
-        (has_capacity_one carrier1) (has_capacity_two carrier1) (has_capacity_three carrier1)
-
-        ; Initial robot state
-        (robot_patient_empty robot2)
-
-
         ; Supply needs
-        (unit_needs_supply unit1 supply1)
-        (unit_needs_supply unit2 supply2)
-        (unit_needs_supply unit3 supply3)
+        (unit_needs_supply trauma_unit scalpel)
+        (unit_needs_supply trauma_unit aspirine)
+        (unit_needs_supply triage_unit tongue)
+        (unit_needs_supply operation_unit antibiotic)
+        (unit_needs_supply operation_unit tank)
+        (unit_needs_supply cardiology_unit bandage)
+        (unit_needs_supply neurology_unit anesthesia)
 
         ; Patient needs
-        (patient_needs_unit patient1 unit3)
-        (patient_needs_unit patient2 unit1)
+        (patient_needs_unit patient1 trauma_unit)
+        (patient_needs_unit patient2 triage_unit)
+        (patient_needs_unit patient3 operation_unit)
     )
-)
 
+    ; (:metric minimize (total-cost))
+)
