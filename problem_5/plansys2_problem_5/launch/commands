@@ -1,70 +1,103 @@
-set instance warehouse location
-set instance corridor1 location
-set instance corridor2 location
-set instance area1 location
+set instance entrance location
+set instance central_warehouse location
+set instance main_corridor location
+set instance secondary_corridor location
+set instance emergency_area location
+set instance surgical_area location
+
+set instance robot_box_1 robot_box
 
 set instance carrier1 carrier
-
-set instance robot1 robot_box
-
-set instance robot2 robot_patient
+set instance robot_patient_1 robot_patient
 
 set instance box1 box
 set instance box2 box
 set instance box3 box
+set instance box4 box
 
-set instance bandages supply
-set instance medicine supply
-set instance masks supply
+set instance scalpel supply
+set instance aspirine supply
+set instance tongue supply
+set instance bandage supply
+set instance antibiotic supply
+set instance tank supply
+set instance anesthesia supply
+
+set instance trauma_unit medical_unit
+set instance triage_unit medical_unit
+set instance operation_unit medical_unit
 
 set instance patient1 patient
+set instance patient2 patient
+set instance patient3 patient
 
-set instance unit1 medical_unit
+set predicate (connected entrance main_corridor)
+set predicate (connected main_corridor entrance)
+set predicate (connected main_corridor emergency_area)
+set predicate (connected emergency_area main_corridor)
+set predicate (connected main_corridor surgical_area)
+set predicate (connected surgical_area main_corridor)
+set predicate (connected main_corridor secondary_corridor)
+set predicate (connected secondary_corridor main_corridor)
+set predicate (connected secondary_corridor central_warehouse)
+set predicate (connected central_warehouse secondary_corridor)
 
-set predicate (connected warehouse corridor1)
-set predicate (connected corridor1 warehouse)
-set predicate (connected corridor1 corridor2)
-set predicate (connected corridor2 corridor1)
-set predicate (connected corridor2 area1)
-set predicate (connected area1 corridor2)
+set predicate (at robot_box_1 central_warehouse)  
+set predicate (at carrier1 central_warehouse)   
+set predicate (at robot_patient_1 entrance)       
 
-set predicate (at robot1 warehouse)
-set predicate (at robot2 warehouse)
-set predicate (at carrier1 warehouse)
-set predicate (at box1 warehouse)
-set predicate (at box2 warehouse)
-set predicate (at box3 warehouse)
-set predicate (at patient1 warehouse)
+set predicate (at box1 central_warehouse)
+set predicate (at box2 central_warehouse)
+set predicate (at box3 central_warehouse)
+set predicate (at box4 central_warehouse)
 
-set predicate (at unit1 area1)
+set predicate (at scalpel central_warehouse)
+set predicate (at aspirine central_warehouse)
+set predicate (at tongue central_warehouse)
+set predicate (at bandage central_warehouse)
+set predicate (at antibiotic central_warehouse)
+set predicate (at tank central_warehouse)
+set predicate (at anesthesia central_warehouse)
 
-set predicate (at bandages warehouse)
-set predicate (at medicine warehouse)
-set predicate (at masks warehouse)
+set predicate (at patient1 entrance)
+set predicate (at patient2 entrance)
+set predicate (at patient3 entrance)
+
+set predicate (at trauma_unit emergency_area)
+set predicate (at triage_unit emergency_area)
+set predicate (at operation_unit surgical_area)
 
 set predicate (box_unloaded box1)
 set predicate (box_unloaded box2)
 set predicate (box_unloaded box3)
+set predicate (box_unloaded box4)
 set predicate (empty box1)
 set predicate (empty box2)
 set predicate (empty box3)
+set predicate (empty box4)
 
 set predicate (carrier_empty carrier1)
+
 set predicate (has_capacity_one carrier1)
 set predicate (has_capacity_two carrier1)
-set predicate (has_capacity_three carrier1)
+set predicate (has_capacity_three carrier1)                                  
 
-set predicate (robot_patient_empty robot2)
+set predicate (robot_has_carrier robot_box_1 carrier1) 
+set predicate (robot_box_not_busy robot_box_1)   
+
+set predicate (robot_patient_empty robot_patient_1)   
+set predicate (robot_patient_not_busy robot_patient_1)   
 
 set predicate (patient_unloaded patient1)
+set predicate (patient_unloaded patient2)
+set predicate (patient_unloaded patient3)
 
-set predicate (unit_needs_supply unit1 bandages)
-set predicate (unit_needs_supply unit1 medicine)
-set predicate (unit_needs_supply unit1 masks)
+set predicate (unit_needs_supply trauma_unit scalpel)
+set predicate (unit_needs_supply trauma_unit aspirine)
+set predicate (unit_needs_supply triage_unit tongue)
 
-set predicate (patient_needs_unit patient1 unit1)
+set predicate (patient_needs_unit patient1 trauma_unit)
+set predicate (patient_needs_unit patient2 triage_unit)
+set predicate (patient_needs_unit patient3 operation_unit)
 
-set predicate (robot_box_not_busy robot1)
-set predicate (robot_patient_not_busy robot2)
-
-set goal (and (unit_has_supply unit1 bandages) (unit_has_supply unit1 medicine) (unit_has_supply unit1 masks) (patient_at_unit patient1 unit1) (carrier_empty carrier1) (at robot1 warehouse) (at carrier1 warehouse) (robot_patient_empty robot2) (at robot2 warehouse))
+set goal (and (unit_has_supply trauma_unit scalpel)(unit_has_supply trauma_unit aspirine)(unit_has_supply triage_unit tongue)(patient_at_unit patient1 trauma_unit)(patient_at_unit patient2 triage_unit)(patient_at_unit patient3 operation_unit))
