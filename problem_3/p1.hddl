@@ -3,7 +3,7 @@
     (:objects
         entrance central_warehouse
         main_corridor secondary_corridor
-        emergency_area surgical_area clinic_area 
+        emergency_area surgical_area 
         - location
         
         robot_box_1 robot_box_2 - robot_box
@@ -15,9 +15,9 @@
         
         scalpel aspirine tongue bandage antibiotic tank anesthesia - supply
 
-        trauma_unit triage_unit operation_unit cardiology_unit neurology_unit - medical_unit
+        trauma_unit triage_unit operation_unit - medical_unit
         
-        patient1 patient2 patient3 - patient
+        patient1 patient2 - patient
     )
 
     (:htn
@@ -25,20 +25,15 @@
         :subtasks (and
             (task0 (deliver_supply_to_unit scalpel trauma_unit))
             (task1 (deliver_supply_to_unit aspirine trauma_unit))
-            (task2 (deliver_supply_to_unit tongue triage_unit))
-            (task3 (deliver_supply_to_unit antibiotic operation_unit))
-            (task4 (deliver_supply_to_unit tank operation_unit))
-            (task5 (deliver_supply_to_unit bandage cardiology_unit))
-            (task6 (deliver_supply_to_unit anesthesia neurology_unit))
-
-            (task7 (accompany_patient_to_unit patient1 trauma_unit))
-            (task8 (accompany_patient_to_unit patient2 triage_unit))
-            (task9 (accompany_patient_to_unit patient3 operation_unit))
+            (task2 (deliver_supply_to_unit tongue operation_unit))
+            (task3 (accompany_patient_to_unit patient1 triage_unit))
+            (task4 (accompany_patient_to_unit patient2 operation_unit))
         )
         :ordering (and
-            (task0 < task1) (task1 < task2) (task2 < task3)
-            (task3 < task4) (task4 < task5) (task5 < task6)
-            (task6 < task7) (task7 < task8) (task8 < task9)
+            (task0 < task1)
+            (task1 < task2)
+            (task2 < task3)
+            (task3 < task4) 
         )
     )
 
@@ -52,8 +47,6 @@
         (connected surgical_area main_corridor)
         (connected main_corridor secondary_corridor)
         (connected secondary_corridor main_corridor)
-        (connected secondary_corridor clinic_area)
-        (connected clinic_area secondary_corridor)
         (connected secondary_corridor central_warehouse)
         (connected central_warehouse secondary_corridor)
         
@@ -80,14 +73,11 @@
         ; All the patients are at the entrance
         (at patient1 entrance)
         (at patient2 entrance)
-        (at patient3 entrance)
         
         ; Medical units locations (no units are located at the central warehouse)
         (at trauma_unit emergency_area)
         (at triage_unit emergency_area)
         (at operation_unit surgical_area)
-        (at cardiology_unit clinic_area)
-        (at neurology_unit clinic_area)
 
         ; Initial box states
         (box_unloaded box1)
@@ -117,21 +107,15 @@
         ; Initial patient states
         (patient_unloaded patient1)
         (patient_unloaded patient2)
-        (patient_unloaded patient3)
         
         ; Supply needs
         (unit_needs_supply trauma_unit scalpel)
         (unit_needs_supply trauma_unit aspirine)
-        (unit_needs_supply triage_unit tongue)
-        (unit_needs_supply operation_unit antibiotic)
-        (unit_needs_supply operation_unit tank)
-        (unit_needs_supply cardiology_unit bandage)
-        (unit_needs_supply neurology_unit anesthesia)
+        (unit_needs_supply operation_unit tongue)
 
         ; Patient needs
-        (patient_needs_unit patient1 trauma_unit)
-        (patient_needs_unit patient2 triage_unit)
-        (patient_needs_unit patient3 operation_unit)
+        (patient_needs_unit patient1 triage_unit)
+        (patient_needs_unit patient2 operation_unit)
     )
 
     ; (:metric minimize (total-cost))
