@@ -33,7 +33,7 @@
         (has_capacity_three ?c - carrier)
 
         ; Robot predicates
-        (robot_has_carrier ?r - robot ?c - carrier)
+        (robot_has_carrier ?r - robot_box ?c - carrier)
 
         ; Patient predicates
         (patient_unloaded ?p - patient)
