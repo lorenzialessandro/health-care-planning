@@ -117,7 +117,6 @@
             (unit_has_supply trauma_unit aspirine)
             (unit_has_supply triage_unit tongue)
             (unit_has_supply operation_unit antibiotic)
-            (unit_has_supply operation_unit tank)
 
             ; All patients should be at the medical unit
             (patient_at_unit patient1 trauma_unit)

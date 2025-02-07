@@ -1,0 +1,35 @@
+;;!domain: healthcare_durative
+;;!problem: healthcare_durative_p2_simple
+
+0.00000: (load_first_box robot_box_1 carrier1 box1 central_warehouse) [2.00000]
+0.00000: (pick_up_patient robot_patient_1 patient2 entrance) [2.00000]
+2.00100: (move_robot_with_patient robot_patient_1 patient2 entrance main_corridor) [3.00000]
+2.00100: (fill_box robot_box_1 box2 central_warehouse scalpel) [3.00000]
+5.00200: (move_robot_with_patient robot_patient_1 patient2 main_corridor emergency_area) [3.00000]
+5.00200: (load_second_box robot_box_1 carrier1 box2 box1 central_warehouse) [2.00000]
+7.00300: (move_carrier_two_boxes robot_box_1 carrier1 box2 box1 central_warehouse main_corridor) [3.00000]
+8.00300: (drop_off_patient robot_patient_1 patient2 emergency_area) [2.00000]
+10.00400: (deliver_patient robot_patient_1 patient2 emergency_area triage_unit) [1.00000]
+10.00400: (move_carrier_two_boxes robot_box_1 carrier1 box2 box1 main_corridor emergency_area) [3.00000]
+11.00500: (move_empty_robot_patient robot_patient_1 emergency_area main_corridor) [2.00000]
+13.00500: (unload_from_two robot_box_1 carrier1 box2 emergency_area) [2.00000]
+13.00600: (move_empty_robot_patient robot_patient_1 main_corridor entrance) [2.00000]
+15.00600: (deliver_supply robot_box_1 box2 emergency_area scalpel trauma_unit) [1.00000]
+15.00700: (pick_up_patient robot_patient_1 patient1 entrance) [2.00000]
+16.00700: (move_carrier_one_box robot_box_1 carrier1 box1 emergency_area main_corridor) [3.00000]
+17.00800: (move_robot_with_patient robot_patient_1 patient1 entrance main_corridor) [3.00000]
+19.00800: (move_carrier_one_box robot_box_1 carrier1 box1 main_corridor central_warehouse) [3.00000]
+20.00900: (move_robot_with_patient robot_patient_1 patient1 main_corridor emergency_area) [3.00000]
+22.00900: (unload_one_box robot_box_1 carrier1 box1 central_warehouse) [2.00000]
+23.01000: (drop_off_patient robot_patient_1 patient1 emergency_area) [2.00000]
+24.01000: (fill_box robot_box_1 box1 central_warehouse aspirine) [3.00000]
+25.01100: (deliver_patient robot_patient_1 patient1 emergency_area trauma_unit) [1.00000]
+27.01100: (load_first_box robot_box_1 carrier1 box1 central_warehouse) [2.00000]
+29.01200: (move_carrier_one_box robot_box_1 carrier1 box1 central_warehouse main_corridor) [3.00000]
+32.01300: (move_carrier_one_box robot_box_1 carrier1 box1 main_corridor surgical_area) [3.00000]
+35.01400: (unload_one_box robot_box_1 carrier1 box1 surgical_area) [2.00000]
+37.01500: (deliver_supply robot_box_1 box1 surgical_area aspirine operation_unit) [1.00000]
+
+; Makespan: 38.015
+; Metric: 38.016
+; States evaluated: 9757
