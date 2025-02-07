@@ -47,7 +47,15 @@ downward --alias lama domain.pddl p1.pddl
 ```
 
 ## Problem 2
-In the second and next domains, the carriers are introduced and new actions are implemented for the handling of multiple box operations. 
+In the second and next domains, the carriers are introduced and new actions are implemented for the handling of multiple box operations.
+
+
+Similar to the previous problem, various settings and goals are tested to evaluate the **[domain.pddl](/problem_2/domain.pddl)** conformity, this time incorporating the new `carrier` type with distinct capacities to assess the robot’s ability to handle multiple boxes simultaneously.
+- [p1.pddl](/problem_2/p1.pddl): same as the previous one, but introduces two types of box-robots (and carriers), one with a maximum capacity of 3 boxes and the other with a maximum capacity of 2 boxes.
+- [p2_simple.pddl](/problem_2/p2_simple.pddl): variant of the one in the previous domain, modified to include the carrier with a 3-box capacity.
+
+Problems can be executed using `LAMA-first`, `Fast Downward` or `LAMA`, following previous instructions. 
+
 ## Problem 3
 The third scenario is modeled using Hierarchical Task Networks (HTN). All actions and predicates remain the same as in Problem 2, but new abstract tasks have been introduced, along with their corresponding methods.
 ## Problem 4
