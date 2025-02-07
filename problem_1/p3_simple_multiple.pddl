@@ -1,6 +1,5 @@
 (define (problem healthcare_basic_p3_simple) 
     (:domain healthcare_basic)
-    ; simple problem with multi robot and 2 patients and 2 units to test different planners
     (:objects
         entrance central_warehouse
         main_corridor
