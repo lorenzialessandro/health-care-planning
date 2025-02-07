@@ -16,38 +16,6 @@ More details, explanation and output examples are present in the **[report.pdf](
 ## Project Structure
 Each folder in the repo contains the `PDDL`/`HDDL` domain and problem files, along with the corresponding `PlanSys2` implementation for the last task. 
 
-```
-health-care-planning/
-├── problem_1         
-│   ├── domain.pddl
-│   ├── p1.pddl
-|   ├── ...  # other problems
-│   └── ...  # .plan files   
-├── problem_2       
-│   ├── domain.pddl
-│   ├── p1.pddl
-|   ├── ...  # other problems
-│   └── ...  # .plan files 
-├── problem_3         
-│   ├── domain.hddl
-│   ├── p1.hddl
-│   └── ...  # .plan files 
-├── problem_4         
-│   ├── domain.pddl
-│   ├── p1.pddl
-|   ├── ...  # other problems
-│   └── ...  # plan files 
-├── problem_1/plansys2_problem_5/      
-│   ├── pddl/domain.pddl
-│   ├── launch/commands
-│   ├── src/...
-│   └── ...  # other files 
-├── report.pdf                   
-└── ...
-```
-
-
-
 ## Installation and Setup
 ### Prerequisites
 To run this project, ensure you have the following installed:
@@ -76,7 +44,7 @@ source install/setup.bash
 ## Problem 1
 The first domain established a solid foundation by coordinating robots for single-box deliveries and patient transport.
 
-To comprehensively evaluate the **[domain.pddl](/problem_1/domain.pddl)**, different problems of increasing complexity can be tested:
+To evaluate the **[domain.pddl](/problem_1/domain.pddl)**, different problems of increasing complexity can be tested:
 - [p1.pddl](/problem_1/p1.pddl): The most complex scenario, it features a diversified roadmap, multiple supplies, and several patients.
 - [p2_simple.pddl](/problem_2/p2_simple.pddl): A simpler scenario with two supply locations and two patients, where items are positioned in different locations. Only one robot of each type is available.
 - [p3_simple_multiple.pddl](/problem_1/p3_simple_multiple.pddl): Similar to [p2_simple.pddl](/problem_2/p2_simple.pddl) but with a total of four robots. 
@@ -192,7 +160,7 @@ source install/setup.bash
 ros2 launch plansys2_problem_5 plansys2_problem_5_launch.py
 ```
 
-Alternatively, you can directly lunch the [terminal1.sh](/problem_5/plansys2_problem_5/terminal1.sh) inside the problem directory, that run these instructions via:
+Alternatively, you can directly launch the [terminal1.sh](/problem_5/plansys2_problem_5/terminal1.sh) inside the problem directory, that run these instructions via:
 ```bash
 ./terminal1.sh
 ```
