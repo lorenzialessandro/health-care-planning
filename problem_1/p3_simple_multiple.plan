@@ -1,0 +1,28 @@
+;;!domain: healthcare_basic
+;;!problem: healthcare_basic_p3_simple
+
+0.00000: (fill_box robot_box_1 box1 central_warehouse aspirine)
+0.00100: (pick_up_patient robot_patient_1 patient2 entrance)
+0.00200: (move_robot_with_patient robot_patient_1 patient2 entrance main_corridor)
+0.00300: (move_robot_with_patient robot_patient_1 patient2 main_corridor emergency_area)
+0.00400: (drop_off_patient robot_patient_1 patient2 emergency_area)
+0.00500: (deliver_patient robot_patient_1 patient2 emergency_area triage_unit)
+0.00600: (fill_box robot_box_1 box2 central_warehouse scalpel)
+0.00700: (load_box robot_box_2 box1 central_warehouse)
+0.00800: (move_robot_with_box robot_box_2 box1 central_warehouse main_corridor)
+0.00900: (load_box robot_box_1 box2 central_warehouse)
+0.01000: (move_robot_with_box robot_box_1 box2 central_warehouse main_corridor)
+0.01100: (pick_up_patient robot_patient_2 patient1 entrance)
+0.01200: (move_robot_with_patient robot_patient_2 patient1 entrance main_corridor)
+0.01300: (move_robot_with_patient robot_patient_2 patient1 main_corridor emergency_area)
+0.01400: (drop_off_patient robot_patient_2 patient1 emergency_area)
+0.01500: (deliver_patient robot_patient_1 patient1 emergency_area trauma_unit)
+0.01600: (move_robot_with_box robot_box_2 box1 main_corridor surgical_area)
+0.01700: (unload_box robot_box_2 box1 surgical_area)
+0.01800: (deliver_supply robot_box_2 box1 surgical_area aspirine operation_unit)
+0.01900: (move_robot_with_box robot_box_1 box2 main_corridor emergency_area)
+0.02000: (unload_box robot_box_1 box2 emergency_area)
+0.02100: (deliver_supply robot_box_1 box2 emergency_area scalpel trauma_unit)
+
+; Makespan: 0.02100000000000001
+; Metric: 0.02100000000000001
