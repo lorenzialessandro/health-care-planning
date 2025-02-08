@@ -96,163 +96,402 @@
 
     ;; --- Patient Transport Methods ---
 
+    ;; Method for complete patient transport workflow:
+        ; 1. Navigate robot to patient location
+        ; 2. Pick up patient
+        ; 3. Transport to destination unit
+        ; 4. Drop off and deliver to unit
     (:method m_accompany_patient
         :parameters (?p - patient ?u - medical_unit ?r - robot_patient ?l1 ?l2 - location)
         :task (accompany_patient_to_unit ?p ?u)
-        ;; Method for complete patient transport workflow:
-        ;; 1. Navigate robot to patient location
-        ;; 2. Pick up patient
-        ;; 3. Transport to destination unit
-        ;; 4. Drop off and deliver to unit
+        :precondition (and
+            (at ?p ?l1)
+            (at ?u ?l2)
+            (patient_needs_unit ?p ?u)
+            (robot_patient_empty ?r)
+        )
+        :subtasks (and
+            (task0 (navigate_robot_patient ?r ?l1))     ; move robot to patient
+            (task1 (pick_up_patient ?r ?p ?l1))         ; pick up patient
+            (task2 (navigate_robot_patient ?r ?l2))     ; move robot to unit
+            (task3 (drop_off_patient ?r ?p ?l2))        ; drop off patient
+            (task4 (deliver_patient ?r ?p ?l2 ?u))      ; deliver patient to unit
+        )
+        :ordering (and
+            (task0 < task1) (task1 < task2) (task2 < task3) (task3 < task4)
+        )
     )
 
     ;; --- Supply Delivery Methods ---
 
+    ;; Method for delivering a single supply using an empty carrier:
+        ; 1. Navigate robot to supply location
+        ; 2. Fill box with supply
+        ; 3. Load box into carrier
+        ; 4. Navigate carrier to unit
+        ; 5. Unload box at unit
+        ; 6. Deliver supply to unit
     (:method m_deliver_supply_one
         :parameters (?s - supply ?u - medical_unit ?r - robot_box ?c - carrier ?b - box ?l1 ?l2 - location)
         :task (deliver_supply_to_unit ?s ?u)
-        ;; Method for delivering a single supply using an empty carrier:
-        ;; 1. Navigate to supply location
-        ;; 2. Fill and load box
-        ;; 3. Transport to destination
-        ;; 4. Unload and deliver
+        :precondition (and
+            (at ?s ?l1)
+            (at ?u ?l2)
+            (robot_has_carrier ?r ?c)
+            (unit_needs_supply ?u ?s)
+            (carrier_empty ?c)
+            (has_capacity_one ?c)
+            (empty ?b)
+        )
+        :subtasks (and
+            (task0 (navigate_carrier ?r ?c ?l1))        ; move robot to where the supply is (warehouse)
+            (task1 (fill_box ?r ?b ?l1 ?s))             ; fill the box with the supply
+            (task2 (load_first_box ?r ?c ?b ?l1))       ; load the box into the carrier
+            (task3 (navigate_carrier ?r ?c ?l2))        ; move the carrier to the unit
+            (task4 (unload_one_box ?r ?c ?b ?l2))       ; unload the box at the unit
+            (task5 (deliver_supply ?r ?b ?l2 ?s ?u))    ; deliver the supply to the unit
+        )
+        :ordering (and
+            (task0 < task1)
+            (task1 < task2)
+            (task2 < task3)
+            (task3 < task4)
+            (task4 < task5)
+        )
     )
 
+    ;; Method for adding a supply to a carrier that already has one box:
+        ; 1. Navigate robot to supply location
+        ; 2. Fill box with supply
+        ; 3. Load second box into carrier
+        ; 4. Navigate carrier to unit
+        ; 5. Unload both boxes at unit
+        ; 6. Deliver supply to unit
     (:method m_deliver_supply_add_to_one
         :parameters (?s - supply ?u - medical_unit ?r - robot_box ?c - carrier 
                     ?b - box ?b_loaded - box ?l1 ?l2 - location)
         :task (deliver_supply_to_unit ?s ?u)
-        ;; Method for adding a supply to a carrier that already has one box:
-        ;; Optimizes delivery by utilizing partially filled carriers
+        :precondition (and
+            (at ?s ?l1)
+            (at ?u ?l2)
+            (robot_has_carrier ?r ?c)
+            (unit_needs_supply ?u ?s)
+            (has_one_box ?c)
+            (has_capacity_two ?c)
+            (empty ?b)
+            (box_loaded_in_carrier ?b_loaded ?c)
+        )
+        :subtasks (and
+            (task0 (navigate_carrier ?r ?c ?l1))
+            (task1 (fill_box ?r ?b ?l1 ?s))
+            (task2 (load_second_box ?r ?c ?b ?b_loaded ?l1))
+            (task3 (navigate_carrier ?r ?c ?l2))
+            (task4 (unload_from_two ?r ?c ?b ?l2))
+            (task5 (deliver_supply ?r ?b ?l2 ?s ?u))
+        )
+        :ordering (and
+            (task0 < task1) (task1 < task2) (task2 < task3)
+            (task3 < task4) (task4 < task5)
+        )
     )
 
+    ;; Method for adding a supply to a carrier that already has two boxes:
+        ; 1. Navigate robot to supply location
+        ; 2. Fill box with supply
+        ; 3. Load third box into carrier
+        ; 4. Navigate carrier to unit
+        ; 5. Unload all three boxes at unit
+        ; 6. Deliver supply to unit
     (:method m_deliver_supply_add_to_two
         :parameters (?s - supply ?u - medical_unit ?r - robot_box ?c - carrier 
                     ?b - box ?b_loaded1 ?b_loaded2 - box ?l1 ?l2 - location)
         :task (deliver_supply_to_unit ?s ?u)
-        ;; Method for adding a supply to a carrier that already has two boxes:
-        ;; Maximizes carrier utilization by filling to capacity
+        :precondition (and
+            (at ?s ?l1)
+            (at ?u ?l2)
+            (robot_has_carrier ?r ?c)
+            (unit_needs_supply ?u ?s)
+            (has_two_boxes ?c)
+            (has_capacity_three ?c)
+            (empty ?b)
+            (box_loaded_in_carrier ?b_loaded1 ?c)
+            (box_loaded_in_carrier ?b_loaded2 ?c)
+        )
+        :subtasks (and
+            (task0 (navigate_carrier ?r ?c ?l1))
+            (task1 (fill_box ?r ?b ?l1 ?s))
+            (task2 (load_third_box ?r ?c ?b ?b_loaded1 ?b_loaded2 ?l1))
+            (task3 (navigate_carrier ?r ?c ?l2))
+            (task4 (unload_from_three ?r ?c ?b ?l2))
+            (task5 (deliver_supply ?r ?b ?l2 ?s ?u))
+        )
+        :ordering (and
+            (task0 < task1) (task1 < task2) (task2 < task3)
+            (task3 < task4) (task4 < task5)
+        )
     )
 
     ;; --- Robot Patient Navigation Methods ---
-
+    
+    ;; Direct path navigation for empty patient robot:
+    ;; Used when locations are directly connected
     (:method m_navigate_empty_robot_patient_direct
         :parameters (?r - robot_patient ?l1 ?l2 - location)
         :task (navigate_robot_patient ?r ?l2)
-        ;; Direct path navigation for empty patient robot:
-        ;; Used when locations are directly connected
+        :precondition (and
+            (at ?r ?l1)
+            (robot_patient_empty ?r)
+            (connected ?l1 ?l2)
+        )
+        :subtasks (and
+            (task0 (move_empty_robot_patient ?r ?l1 ?l2))
+        )
     )
 
+    ;; Multi-hop navigation for empty patient robot:
+    ;; Used when destination requires intermediate stops
     (:method m_navigate_empty_robot_patient_via
         :parameters (?r - robot_patient ?l1 ?l2 ?l3 - location)
         :task (navigate_robot_patient ?r ?l3)
-        ;; Multi-hop navigation for empty patient robot:
-        ;; Used when destination requires intermediate stops
+        :precondition (and
+            (at ?r ?l1)
+            (robot_patient_empty ?r)
+            (connected ?l1 ?l2)
+        )
+        :subtasks (and
+            (task0 (move_empty_robot_patient ?r ?l1 ?l2))
+            (task1 (navigate_robot_patient ?r ?l3))
+        )
+        :ordering (and
+            (task0 < task1)
+        )
     )
 
+    ;; Check if patient robot is already at location:
     (:method m_robot_patient_is_already_there
         :parameters (?r - robot_patient ?l - location)
         :task (navigate_robot_patient ?r ?l)
-        ;; Optimization method:
-        ;; Handles case where robot is already at destination
+        :precondition (and
+            (at ?r ?l)
+        )
+        :subtasks ()
     )
 
+    ;;  Direct path navigation for robot carrying patient:
+    ;; Ensures coordinated movement of robot and patient
     (:method m_navigate_robot_patient_direct
         :parameters (?r - robot_patient ?p - patient ?l1 ?l2 - location)
         :task (navigate_robot_patient ?r ?l2)
-        ;; Direct path navigation for robot carrying patient:
-        ;; Ensures coordinated movement of robot and patient
+        :precondition (and
+            (at ?r ?l1)
+            (at ?p ?l1)
+            (patient_loaded_in_robot ?p ?r)
+            (connected ?l1 ?l2)
+        )
+        :subtasks (and
+            (task0 (move_robot_with_patient ?r ?p ?l1 ?l2))
+        )
     )
 
+    ;; Multi-hop navigation for robot carrying patient:
+    ;; Used when destination requires intermediate stops
     (:method m_navigate_robot_patient_via
         :parameters (?r - robot_patient ?p - patient ?l1 ?l2 ?l3 - location)
         :task (navigate_robot_patient ?r ?l3)
-        ;; Multi-hop navigation for robot carrying patient:
-        ;; Handles complex paths while maintaining patient state
+        :precondition (and
+            (at ?r ?l1)
+            (at ?p ?l1)
+            (patient_loaded_in_robot ?p ?r)
+            (connected ?l1 ?l2)
+        )
+        :subtasks (and
+            (task0 (move_robot_with_patient ?r ?p ?l1 ?l2))
+            (task1 (navigate_robot_patient ?r ?l3))
+        )
+        :ordering (and
+            (task0 < task1)
+        )
     )
+    
 
     ;; --- Carrier Navigation Methods ---
 
+    ;; Direct path navigation for empty carrier:
+    ;; Used when locations are directly connected
     (:method m_navigate_empty_carrier_direct
         :parameters (?r - robot_box ?c - carrier ?l1 ?l2 - location)
         :task (navigate_carrier ?r ?c ?l2)
-        ;; Direct path navigation for empty carrier:
-        ;; Simplest form of carrier movement
+        :precondition (and
+            (at ?r ?l1)
+            (at ?c ?l1)
+            (connected ?l1 ?l2)
+            (robot_has_carrier ?r ?c)
+            (carrier_empty ?c)
+        )
+        :subtasks (and
+            (task0 (move_empty_carrier ?r ?c ?l1 ?l2))
+        )
     )
 
+    ;; Multi-hop navigation for empty carrier:
+    ;; Used when destination requires intermediate stops
     (:method m_navigate_empty_carrier_via
         :parameters (?r - robot_box ?c - carrier ?l1 ?l2 ?l3 - location)
         :task (navigate_carrier ?r ?c ?l3)
-        ;; Multi-hop navigation for empty carrier:
-        ;; Handles complex paths with intermediate locations
+        :precondition (and
+            (at ?r ?l1)
+            (at ?c ?l1)
+            (connected ?l1 ?l2)
+            (robot_has_carrier ?r ?c)
+            (carrier_empty ?c)
+        )
+        :subtasks (and
+            (task0 (move_empty_carrier ?r ?c ?l1 ?l2))
+            (task1 (navigate_carrier ?r ?c ?l3))
+        )
+        :ordering (and
+            (task0 < task1)
+        )
     )
 
+    ;; Check if carrier is already at location:
     (:method m_carrier_is_already_there
         :parameters (?r - robot_box ?c - carrier ?l - location)
         :task (navigate_carrier ?r ?c ?l)
-        ;; Optimization method:
-        ;; Avoids unnecessary movement when already at destination
+        :precondition (and
+            (at ?r ?l)
+            (at ?c ?l)
+            (robot_has_carrier ?r ?c)
+        )
+        :subtasks ()
     )
 
     ;; --- Loaded Carrier Navigation Methods ---
     ;; Each navigation method has variants for different load states (1-3 boxes)
     ;; Both direct and via (multi-hop) versions are provided
 
+    ;; Direct navigation for carrier with one box:
     (:method m_navigate_carrier_1_direct
         :parameters (?r - robot_box ?c - carrier ?b - box ?l1 ?l2 - location)
         :task (navigate_carrier ?r ?c ?l2)
-        ;; Direct navigation for carrier with one box
-    )
+        :precondition (and
+            (at ?r ?l1)
+            (at ?c ?l1)
+            (has_one_box ?c)
+            (connected ?l1 ?l2)
+            (robot_has_carrier ?r ?c)
+            (box_loaded_in_carrier ?b ?c)
+        )
+        :subtasks (and
+            (task0 (move_carrier_one_box ?r ?c ?b ?l1 ?l2))
+        )
+    ) 
 
+    ;; Multi-hop navigation for carrier with one box:
     (:method m_navigate_carrier_1_via
         :parameters (?r - robot_box ?c - carrier ?b - box ?l1 ?l2 ?l3 - location)
         :task (navigate_carrier ?r ?c ?l3)
-        ;; Multi-hop navigation for carrier with one box:
-        ;; - Used when destination requires intermediate stops
-        ;; - Maintains box-carrier relationship during transit
-        ;; - Recursively plans path through connected locations
+        :precondition (and
+            (at ?r ?l1)
+            (at ?c ?l1)
+            (has_one_box ?c)
+            (connected ?l1 ?l2)
+            (robot_has_carrier ?r ?c)
+            (box_loaded_in_carrier ?b ?c)
+        )
+        :subtasks (and
+            (task0 (move_carrier_one_box ?r ?c ?b ?l1 ?l2))
+            (task1 (navigate_carrier ?r ?c ?l3))
+        )
+        :ordering (and
+            (task0 < task1)
+        )
     )
 
+    ;; Direct navigation for carrier with two boxes:
     (:method m_navigate_carrier_2_direct
         :parameters (?r - robot_box ?c - carrier ?b1 - box ?b2 - box ?l1 ?l2 - location)
         :task (navigate_carrier ?r ?c ?l2)
-        ;; Direct path navigation for carrier with two boxes:
-        ;; - Requires tracking of both boxes during movement
-        ;; - Ensures coordinated movement of carrier and all boxes
-        ;; - Used when locations are directly connected
+        :precondition (and
+            (at ?r ?l1)
+            (at ?c ?l1)
+            (has_two_boxes ?c)
+            (connected ?l1 ?l2)
+            (robot_has_carrier ?r ?c)
+            (box_loaded_in_carrier ?b1 ?c)
+            (box_loaded_in_carrier ?b2 ?c)
+        )
+        :subtasks (and
+            (task0 (move_carrier_two_boxes ?r ?c ?b1 ?b2 ?l1 ?l2))
+        )
     )
 
+    ;; Multi-hop navigation for carrier with two boxes:
     (:method m_navigate_carrier_2_via
         :parameters (?r - robot_box ?c - carrier ?b1 - box ?b2 - box ?l1 ?l2 ?l3 - location)
         :task (navigate_carrier ?r ?c ?l3)
-        ;; Multi-hop navigation for carrier with two boxes:
-        ;; - Complex path planning with double load
-        ;; - Maintains state of both boxes during transit
-        ;; - Uses recursive navigation for longer paths
+        :precondition (and
+            (at ?r ?l1)
+            (at ?c ?l1)
+            (has_two_boxes ?c)
+            (connected ?l1 ?l2)
+            (robot_has_carrier ?r ?c)
+            (box_loaded_in_carrier ?b1 ?c)
+            (box_loaded_in_carrier ?b2 ?c)
+        )
+        :subtasks (and
+            (task0 (move_carrier_two_boxes ?r ?c ?b1 ?b2 ?l1 ?l2))
+            (task1 (navigate_carrier ?r ?c ?l3))
+        )
+        :ordering (and
+            (task0 < task1)
+        )
     )
 
+    ;; Direct navigation for carrier with three boxes:
     (:method m_navigate_carrier_3_direct
         :parameters (?r - robot_box ?c - carrier ?b1 - box ?b2 - box ?b3 - box ?l1 ?l2 - location)
         :task (navigate_carrier ?r ?c ?l2)
-        ;; Direct path navigation for fully loaded carrier:
-        ;; - Handles maximum load case (three boxes)
-        ;; - Ensures synchronized movement of all components
-        ;; - Most complex single-step movement operation
+        :precondition (and
+            (at ?r ?l1)
+            (at ?c ?l1)
+            (has_three_boxes ?c)
+            (connected ?l1 ?l2)
+            (robot_has_carrier ?r ?c)
+            (box_loaded_in_carrier ?b1 ?c)
+            (box_loaded_in_carrier ?b2 ?c)
+            (box_loaded_in_carrier ?b3 ?c)
+        )
+        :subtasks (and
+            (task0 (move_carrier_three_boxes ?r ?c ?b1 ?b2 ?b3 ?l1 ?l2))
+        )
     )
 
+    ;; Multi-hop navigation for carrier with three boxes:
     (:method m_navigate_carrier_3_via
         :parameters (?r - robot_box ?c - carrier ?b1 - box ?b2 - box ?b3 - box ?l1 ?l2 ?l3 - location)
         :task (navigate_carrier ?r ?c ?l3)
-        ;; Multi-hop navigation for fully loaded carrier:
-        ;; - Most complex navigation scenario
-        ;; - Maintains state of three boxes during transit
-        ;; - Breaks down long paths into connected segments
-        ;; - Requires careful state tracking for all components
+        :precondition (and
+            (at ?r ?l1)
+            (at ?c ?l1)
+            (has_three_boxes ?c)
+            (connected ?l1 ?l2)
+            (robot_has_carrier ?r ?c)
+            (box_loaded_in_carrier ?b1 ?c)
+            (box_loaded_in_carrier ?b2 ?c)
+            (box_loaded_in_carrier ?b3 ?c)
+        )
+        :subtasks (and
+            (task0 (move_carrier_three_boxes ?r ?c ?b1 ?b2 ?b3 ?l1 ?l2))
+            (task1 (navigate_carrier ?r ?c ?l3))
+        )
+        :ordering (and
+            (task0 < task1)
+        )
     )
+    
+    ;; === Primitive Actions ===
 
-    
-    ;; --- Primitive Actions --- 
-    
     ;; === Supply Operations ===
     ;; These actions handle the logistics of supply delivery:
     ;; 1. Filling boxes with supplies
