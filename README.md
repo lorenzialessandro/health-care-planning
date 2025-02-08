@@ -1,5 +1,5 @@
 # Health Care Planning
-This repo contains the code for the assignment of the *Automated Planning Theory and Practice* course (AY 2024-2025). 
+This repository contains the implementation for the *Automated Planning Theory and Practice* course assignment (AY 2024-2025) at University of Trento. 
 
 The objective of the assignment is to model and solve planning problems in a **healthcare scenario** using `PDDL` (Planning Domain Definition Language) and `HDDL` (Hierarchical Domain Definition Language), as well as to integrate a temporal planning model within a robotic framework leveraging the `PlanSys2` infrastructure in ROS2. 
 
@@ -11,10 +11,36 @@ The assignment focuses on developing and testing planning models with increasing
 concurrency constraints.
 - **Problem 5**: Executing the temporal model in `PlanSys2`.
 
-More details, explanation and output examples are present in the **[report.pdf](report.pdf)** file.
+More details, explanations and output examples are present in the **[report.pdf](report.pdf)** file.
 
 ## Project Structure
 Each folder in the repo contains the `PDDL`/`HDDL` domain and problem files, along with the corresponding `PlanSys2` implementation for the last task. 
+
+## Quick Start
+```bash
+# Clone the repository
+git https://github.com/lorenzialessandro/health-care-planning
+cd health-care-planning
+
+# Run a simple example (Problem 1) - See instructions below
+cd problem_1
+fast-downward.py domain.pddl p2_simple.pddl --search "astar(lmcut())"
+```
+
+## Project Structure
+```
+health-care-planning/
+├── problem_1/            # Base PDDL implementation
+│   ├── domain.pddl
+│   ├── p*.pddl      # Problem instances
+│   └── p*.plan      # Output plans instances
+├── problem_2/           # Extended PDDL domain
+├── problem_3/           # HTN implementation
+├── problem_4/           # Temporal planning
+└── problem_5/           # PlanSys2 integration
+    └── plansys2_problem_5/
+```
+
 
 ## Installation and Setup
 ### Prerequisites
@@ -203,6 +229,11 @@ The last instruction produces the visualization of the plan execution in Termina
 
 3. **Plan execution fails in PlanSys2**
    - Check if the knowledge base is correctly injected (`commands` file in Problem 5).
+
+### Runtime Issues
+- **Plan Generation Timeout**: Increase search time limit
+- **Memory Errors**: Reduce problem complexity or increase swap space
+- **PlanSys2 Connection Issues**: Check ROS2 network configuration
 
 ## Author
 Alessandro Lorenzi - alessandro.lorenzi-1@studenti.unitn.it
