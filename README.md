@@ -1,6 +1,8 @@
 # Health Care Planning
 This repository contains the implementation for the *Automated Planning Theory and Practice* course assignment (AY 2024-2025) at University of Trento. 
 
+![](img.png)
+
 The objective of the assignment is to model and solve planning problems in a **healthcare scenario** using `PDDL` (Planning Domain Definition Language) and `HDDL` (Hierarchical Domain Definition Language), as well as to integrate a temporal planning model within a robotic framework leveraging the `PlanSys2` infrastructure in ROS2. 
 
 The assignment focuses on developing and testing planning models with increasing complexity:
