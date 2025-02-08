@@ -1,3 +1,4 @@
+;; Healthcare Domain using Hierarchical Task Networks (HTN)
 (define (domain healthcare_htn)
     (:requirements :typing :hierachie)    
     (:types
