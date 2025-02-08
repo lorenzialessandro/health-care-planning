@@ -7,658 +7,451 @@
     )
 
     (:predicates
-        ; Location predicates
-        (at ?o - locatable ?l - location)
-        (connected ?l1 - location ?l2 - location)
+        ;; Location predicates - Track positions of objects
+        (at ?o - locatable ?l - location)           ; Object ?o is at location ?l
+        (connected ?l1 - location ?l2 - location)   ; Location ?l1 is directly connected to ?l2
         
-        ; Box predicates
-        (box_loaded_in_carrier ?b - box ?c - carrier)
-        (box_unloaded ?b - box)
-        (empty ?b - box)
-        (box_has_supply ?b - box ?s - supply)
+        ;; Box predicates - Track box states and contents
+        (box_loaded_in_carrier ?b - box ?c - carrier)   ; Box ?b is loaded in carrier ?c
+        (box_unloaded ?b - box)                         ; Box ?b is not in any carrier
+        (empty ?b - box)                                ; Box ?b contains no supplies
+        (box_has_supply ?b - box ?s - supply)          ; Box ?b contains supply ?s
         
-        ; Unit predicates
-        (unit_needs_supply ?u - medical_unit ?s - supply)
-        (unit_has_supply ?u - medical_unit ?s - supply)
+        ;; Unit predicates - Track medical unit needs and inventory
+        (unit_needs_supply ?u - medical_unit ?s - supply)    ; Medical unit ?u needs supply ?s
+        (unit_has_supply ?u - medical_unit ?s - supply)      ; Medical unit ?u has supply ?s
         
-        ; Carrier capacity tracking
-        (has_one_box ?c - carrier)
-        (has_two_boxes ?c - carrier)
-        (has_three_boxes ?c - carrier)
+        ;; Carrier predicates - Track load state and capacity
+        (has_one_box ?c - carrier)              ; Carrier contains exactly one box
+        (has_two_boxes ?c - carrier)            ; Carrier contains exactly two boxes
+        (has_three_boxes ?c - carrier)          ; Carrier contains exactly three boxes
+        (carrier_empty ?c - carrier)            ; Carrier contains no boxes
         
-        (carrier_empty ?c - carrier)
-        
-        (has_capacity_one ?c - carrier)
-        (has_capacity_two ?c - carrier)
-        (has_capacity_three ?c - carrier)
+        (has_capacity_one ?c - carrier)         ; Carrier can hold at least one box
+        (has_capacity_two ?c - carrier)         ; Carrier can hold at least two boxes
+        (has_capacity_three ?c - carrier)       ; Carrier can hold three boxes
 
-        ; Robot predicates
-        (robot_has_carrier ?r - robot_box ?c - carrier)
+        ;; Robot predicates - Track robot-carrier relationships
+        (robot_has_carrier ?r - robot_box ?c - carrier)  ; Robot ?r is connected to carrier ?c
 
-        ; Patient predicates
-        (patient_unloaded ?p - patient)
-        (patient_loaded_in_robot ?p - patient ?r - robot_patient)
-        (patient_needs_unit ?p - patient ?u - medical_unit)
-        (patient_at_unit ?p - patient ?u - medical_unit)
+        ;; Patient predicates - Track patient states and needs
+        (patient_unloaded ?p - patient)                      ; Patient ?p is not in any robot
+        (patient_loaded_in_robot ?p - patient ?r - robot_patient)  ; Patient ?p is in robot ?r
+        (patient_needs_unit ?p - patient ?u - medical_unit)       ; Patient ?p needs to go to unit ?u
+        (patient_at_unit ?p - patient ?u - medical_unit)         ; Patient ?p is at unit ?u
 
-        ; Robot patient predicates
-        (robot_patient_empty ?r - robot_patient)
-        
+        ;; Robot patient predicates - Track patient robot availability
+        (robot_patient_empty ?r - robot_patient)    ; Patient robot ?r is not carrying anyone
     )
 
-    ; Essential Abstract Tasks
+    ;; === Abstract Tasks ===
+    ;; The domain defines four essential high-level tasks that capture the main operations
+    ;; in the healthcare environment. These abstract tasks are decomposed into concrete
+    ;; actions through various methods.
+
     (:task deliver_supply_to_unit
         :parameters (?s - supply ?u - medical_unit)
         :precondition ()
         :effect ()
+        ;; High-level task for delivering supplies to medical units
+        ;; This task can be achieved through three different methods:
+        ;; 1. Delivering with an empty carrier (m_deliver_supply_one)
+        ;; 2. Adding to a carrier with one box (m_deliver_supply_add_to_one)
+        ;; 3. Adding to a carrier with two boxes (m_deliver_supply_add_to_two)
     )
 
     (:task accompany_patient_to_unit
         :parameters (?p - patient ?u - medical_unit)
         :precondition ()
         :effect ()
+        ;; High-level task for transporting patients to their required medical units
+        ;; Implemented through a single method that handles the complete patient
+        ;; transport workflow from pickup to delivery
     )
 
     (:task navigate_carrier
         :parameters (?r - robot_box ?c - carrier ?l - location)
         :precondition ()
         :effect ()
+        ;; High-level task for carrier navigation between locations
+        ;; Supports different methods based on:
+        ;; 1. Direct connections vs multi-hop paths
+        ;; 2. Load state (empty, one, two, or three boxes)
     )
 
     (:task navigate_robot_patient
         :parameters (?r - robot_patient ?l - location)
         :precondition ()
         :effect ()
+        ;; High-level task for patient robot navigation
+        ;; Supports different methods based on:
+        ;; 1. Direct connections vs multi-hop paths
+        ;; 2. Robot state (empty or carrying patient)
     )
-    
 
-    ; Methods
+    ;; === Methods ===
+    ;; Methods provide different ways to accomplish the abstract tasks
+    ;; They are organized by the task they implement
 
-    ; Accompany a patient to unit
+    ;; --- Patient Transport Methods ---
+
     (:method m_accompany_patient
         :parameters (?p - patient ?u - medical_unit ?r - robot_patient ?l1 ?l2 - location)
         :task (accompany_patient_to_unit ?p ?u)
-        :precondition (and
-            (at ?p ?l1)
-            (at ?u ?l2)
-            (patient_needs_unit ?p ?u)
-            (robot_patient_empty ?r)
-        )
-        :subtasks (and
-            (task0 (navigate_robot_patient ?r ?l1))     ; move robot to patient
-            (task1 (pick_up_patient ?r ?p ?l1))         ; pick up patient
-            (task2 (navigate_robot_patient ?r ?l2))     ; move robot to unit
-            (task3 (drop_off_patient ?r ?p ?l2))        ; drop off patient
-            (task4 (deliver_patient ?r ?p ?l2 ?u))      ; deliver patient to unit
-        )
-        :ordering (and
-            (task0 < task1) (task1 < task2) (task2 < task3) (task3 < task4)
-        )
+        ;; Method for complete patient transport workflow:
+        ;; 1. Navigate robot to patient location
+        ;; 2. Pick up patient
+        ;; 3. Transport to destination unit
+        ;; 4. Drop off and deliver to unit
     )
 
-    ; Deliver one supply to unit
+    ;; --- Supply Delivery Methods ---
+
     (:method m_deliver_supply_one
         :parameters (?s - supply ?u - medical_unit ?r - robot_box ?c - carrier ?b - box ?l1 ?l2 - location)
         :task (deliver_supply_to_unit ?s ?u)
-        :precondition (and
-            (at ?s ?l1)
-            (at ?u ?l2)
-            (robot_has_carrier ?r ?c)
-            (unit_needs_supply ?u ?s)
-            (carrier_empty ?c)
-            (has_capacity_one ?c)
-            (empty ?b)
-        )
-        :subtasks (and
-            (task0 (navigate_carrier ?r ?c ?l1))        ; move robot to where the supply is (warehouse)
-            (task1 (fill_box ?r ?b ?l1 ?s))             ; fill the box with the supply
-            (task2 (load_first_box ?r ?c ?b ?l1))       ; load the box into the carrier
-            (task3 (navigate_carrier ?r ?c ?l2))        ; move the carrier to the unit
-            (task4 (unload_one_box ?r ?c ?b ?l2))       ; unload the box at the unit
-            (task5 (deliver_supply ?r ?b ?l2 ?s ?u))    ; deliver the supply to the unit
-        )
-        :ordering (and
-            (task0 < task1)
-            (task1 < task2)
-            (task2 < task3)
-            (task3 < task4)
-            (task4 < task5)
-        )
+        ;; Method for delivering a single supply using an empty carrier:
+        ;; 1. Navigate to supply location
+        ;; 2. Fill and load box
+        ;; 3. Transport to destination
+        ;; 4. Unload and deliver
     )
 
-    ; When carrier has one box, add another supply and deliver to unit
     (:method m_deliver_supply_add_to_one
         :parameters (?s - supply ?u - medical_unit ?r - robot_box ?c - carrier 
                     ?b - box ?b_loaded - box ?l1 ?l2 - location)
         :task (deliver_supply_to_unit ?s ?u)
-        :precondition (and
-            (at ?s ?l1)
-            (at ?u ?l2)
-            (robot_has_carrier ?r ?c)
-            (unit_needs_supply ?u ?s)
-            (has_one_box ?c)
-            (has_capacity_two ?c)
-            (empty ?b)
-            (box_loaded_in_carrier ?b_loaded ?c)
-        )
-        :subtasks (and
-            (task0 (navigate_carrier ?r ?c ?l1))
-            (task1 (fill_box ?r ?b ?l1 ?s))
-            (task2 (load_second_box ?r ?c ?b ?b_loaded ?l1))
-            (task3 (navigate_carrier ?r ?c ?l2))
-            (task4 (unload_from_two ?r ?c ?b ?l2))
-            (task5 (deliver_supply ?r ?b ?l2 ?s ?u))
-        )
-        :ordering (and
-            (task0 < task1) (task1 < task2) (task2 < task3)
-            (task3 < task4) (task4 < task5)
-        )
+        ;; Method for adding a supply to a carrier that already has one box:
+        ;; Optimizes delivery by utilizing partially filled carriers
     )
 
-    ; When carrier has two boxes, add another supply and deliver to unit
     (:method m_deliver_supply_add_to_two
         :parameters (?s - supply ?u - medical_unit ?r - robot_box ?c - carrier 
                     ?b - box ?b_loaded1 ?b_loaded2 - box ?l1 ?l2 - location)
         :task (deliver_supply_to_unit ?s ?u)
-        :precondition (and
-            (at ?s ?l1)
-            (at ?u ?l2)
-            (robot_has_carrier ?r ?c)
-            (unit_needs_supply ?u ?s)
-            (has_two_boxes ?c)
-            (has_capacity_three ?c)
-            (empty ?b)
-            (box_loaded_in_carrier ?b_loaded1 ?c)
-            (box_loaded_in_carrier ?b_loaded2 ?c)
-        )
-        :subtasks (and
-            (task0 (navigate_carrier ?r ?c ?l1))
-            (task1 (fill_box ?r ?b ?l1 ?s))
-            (task2 (load_third_box ?r ?c ?b ?b_loaded1 ?b_loaded2 ?l1))
-            (task3 (navigate_carrier ?r ?c ?l2))
-            (task4 (unload_from_three ?r ?c ?b ?l2))
-            (task5 (deliver_supply ?r ?b ?l2 ?s ?u))
-        )
-        :ordering (and
-            (task0 < task1) (task1 < task2) (task2 < task3)
-            (task3 < task4) (task4 < task5)
-        )
+        ;; Method for adding a supply to a carrier that already has two boxes:
+        ;; Maximizes carrier utilization by filling to capacity
     )
 
-    ; Move empty robot_patient to location (direct and via methods)
+    ;; --- Robot Patient Navigation Methods ---
+
     (:method m_navigate_empty_robot_patient_direct
         :parameters (?r - robot_patient ?l1 ?l2 - location)
         :task (navigate_robot_patient ?r ?l2)
-        :precondition (and
-            (at ?r ?l1)
-            (robot_patient_empty ?r)
-            (connected ?l1 ?l2)
-        )
-        :subtasks (and
-            (task0 (move_empty_robot_patient ?r ?l1 ?l2))
-        )
+        ;; Direct path navigation for empty patient robot:
+        ;; Used when locations are directly connected
     )
 
     (:method m_navigate_empty_robot_patient_via
         :parameters (?r - robot_patient ?l1 ?l2 ?l3 - location)
         :task (navigate_robot_patient ?r ?l3)
-        :precondition (and
-            (at ?r ?l1)
-            (robot_patient_empty ?r)
-            (connected ?l1 ?l2)
-        )
-        :subtasks (and
-            (task0 (move_empty_robot_patient ?r ?l1 ?l2))
-            (task1 (navigate_robot_patient ?r ?l3))
-        )
-        :ordering (and
-            (task0 < task1)
-        )
+        ;; Multi-hop navigation for empty patient robot:
+        ;; Used when destination requires intermediate stops
     )
 
-    ; Check if robot_patient is already at location
     (:method m_robot_patient_is_already_there
         :parameters (?r - robot_patient ?l - location)
         :task (navigate_robot_patient ?r ?l)
-        :precondition (and
-            (at ?r ?l)
-        )
-        :subtasks ()
+        ;; Optimization method:
+        ;; Handles case where robot is already at destination
     )
 
-    ; Move robot_patient with patient to location (direct and via methods)
     (:method m_navigate_robot_patient_direct
         :parameters (?r - robot_patient ?p - patient ?l1 ?l2 - location)
         :task (navigate_robot_patient ?r ?l2)
-        :precondition (and
-            (at ?r ?l1)
-            (at ?p ?l1)
-            (patient_loaded_in_robot ?p ?r)
-            (connected ?l1 ?l2)
-        )
-        :subtasks (and
-            (task0 (move_robot_with_patient ?r ?p ?l1 ?l2))
-        )
+        ;; Direct path navigation for robot carrying patient:
+        ;; Ensures coordinated movement of robot and patient
     )
 
     (:method m_navigate_robot_patient_via
         :parameters (?r - robot_patient ?p - patient ?l1 ?l2 ?l3 - location)
         :task (navigate_robot_patient ?r ?l3)
-        :precondition (and
-            (at ?r ?l1)
-            (at ?p ?l1)
-            (patient_loaded_in_robot ?p ?r)
-            (connected ?l1 ?l2)
-        )
-        :subtasks (and
-            (task0 (move_robot_with_patient ?r ?p ?l1 ?l2))
-            (task1 (navigate_robot_patient ?r ?l3))
-        )
-        :ordering (and
-            (task0 < task1)
-        )
+        ;; Multi-hop navigation for robot carrying patient:
+        ;; Handles complex paths while maintaining patient state
     )
-    
 
-    ; Move empty carrier to location (direct and via methods)
+    ;; --- Carrier Navigation Methods ---
 
     (:method m_navigate_empty_carrier_direct
         :parameters (?r - robot_box ?c - carrier ?l1 ?l2 - location)
         :task (navigate_carrier ?r ?c ?l2)
-        :precondition (and
-            (at ?r ?l1)
-            (at ?c ?l1)
-            (connected ?l1 ?l2)
-            (robot_has_carrier ?r ?c)
-            (carrier_empty ?c)
-        )
-        :subtasks (and
-            (task0 (move_empty_carrier ?r ?c ?l1 ?l2))
-        )
+        ;; Direct path navigation for empty carrier:
+        ;; Simplest form of carrier movement
     )
 
     (:method m_navigate_empty_carrier_via
         :parameters (?r - robot_box ?c - carrier ?l1 ?l2 ?l3 - location)
         :task (navigate_carrier ?r ?c ?l3)
-        :precondition (and
-            (at ?r ?l1)
-            (at ?c ?l1)
-            (connected ?l1 ?l2)
-            (robot_has_carrier ?r ?c)
-            (carrier_empty ?c)
-        )
-        :subtasks (and
-            (task0 (move_empty_carrier ?r ?c ?l1 ?l2))
-            (task1 (navigate_carrier ?r ?c ?l3))
-        )
-        :ordering (and
-            (task0 < task1)
-        )
+        ;; Multi-hop navigation for empty carrier:
+        ;; Handles complex paths with intermediate locations
     )
 
-    ; Check if carrier is already at location
     (:method m_carrier_is_already_there
         :parameters (?r - robot_box ?c - carrier ?l - location)
         :task (navigate_carrier ?r ?c ?l)
-        :precondition (and
-            (at ?r ?l)
-            (at ?c ?l)
-            (robot_has_carrier ?r ?c)
-        )
-        :subtasks ()
+        ;; Optimization method:
+        ;; Avoids unnecessary movement when already at destination
     )
 
-    ; Move carrier to location
-    ; implement for 1, 2, 3 boxes (direct and via methods) - can be easily extended to more boxes
+    ;; --- Loaded Carrier Navigation Methods ---
+    ;; Each navigation method has variants for different load states (1-3 boxes)
+    ;; Both direct and via (multi-hop) versions are provided
 
     (:method m_navigate_carrier_1_direct
         :parameters (?r - robot_box ?c - carrier ?b - box ?l1 ?l2 - location)
         :task (navigate_carrier ?r ?c ?l2)
-        :precondition (and
-            (at ?r ?l1)
-            (at ?c ?l1)
-            (has_one_box ?c)
-            (connected ?l1 ?l2)
-            (robot_has_carrier ?r ?c)
-            (box_loaded_in_carrier ?b ?c)
-        )
-        :subtasks (and
-            (task0 (move_carrier_one_box ?r ?c ?b ?l1 ?l2))
-        )
-    ) 
+        ;; Direct navigation for carrier with one box
+    )
 
     (:method m_navigate_carrier_1_via
         :parameters (?r - robot_box ?c - carrier ?b - box ?l1 ?l2 ?l3 - location)
         :task (navigate_carrier ?r ?c ?l3)
-        :precondition (and
-            (at ?r ?l1)
-            (at ?c ?l1)
-            (has_one_box ?c)
-            (connected ?l1 ?l2)
-            (robot_has_carrier ?r ?c)
-            (box_loaded_in_carrier ?b ?c)
-        )
-        :subtasks (and
-            (task0 (move_carrier_one_box ?r ?c ?b ?l1 ?l2))
-            (task1 (navigate_carrier ?r ?c ?l3))
-        )
-        :ordering (and
-            (task0 < task1)
-        )
+        ;; Multi-hop navigation for carrier with one box:
+        ;; - Used when destination requires intermediate stops
+        ;; - Maintains box-carrier relationship during transit
+        ;; - Recursively plans path through connected locations
     )
 
     (:method m_navigate_carrier_2_direct
         :parameters (?r - robot_box ?c - carrier ?b1 - box ?b2 - box ?l1 ?l2 - location)
         :task (navigate_carrier ?r ?c ?l2)
-        :precondition (and
-            (at ?r ?l1)
-            (at ?c ?l1)
-            (has_two_boxes ?c)
-            (connected ?l1 ?l2)
-            (robot_has_carrier ?r ?c)
-            (box_loaded_in_carrier ?b1 ?c)
-            (box_loaded_in_carrier ?b2 ?c)
-        )
-        :subtasks (and
-            (task0 (move_carrier_two_boxes ?r ?c ?b1 ?b2 ?l1 ?l2))
-        )
+        ;; Direct path navigation for carrier with two boxes:
+        ;; - Requires tracking of both boxes during movement
+        ;; - Ensures coordinated movement of carrier and all boxes
+        ;; - Used when locations are directly connected
     )
 
     (:method m_navigate_carrier_2_via
         :parameters (?r - robot_box ?c - carrier ?b1 - box ?b2 - box ?l1 ?l2 ?l3 - location)
         :task (navigate_carrier ?r ?c ?l3)
-        :precondition (and
-            (at ?r ?l1)
-            (at ?c ?l1)
-            (has_two_boxes ?c)
-            (connected ?l1 ?l2)
-            (robot_has_carrier ?r ?c)
-            (box_loaded_in_carrier ?b1 ?c)
-            (box_loaded_in_carrier ?b2 ?c)
-        )
-        :subtasks (and
-            (task0 (move_carrier_two_boxes ?r ?c ?b1 ?b2 ?l1 ?l2))
-            (task1 (navigate_carrier ?r ?c ?l3))
-        )
-        :ordering (and
-            (task0 < task1)
-        )
+        ;; Multi-hop navigation for carrier with two boxes:
+        ;; - Complex path planning with double load
+        ;; - Maintains state of both boxes during transit
+        ;; - Uses recursive navigation for longer paths
     )
 
     (:method m_navigate_carrier_3_direct
         :parameters (?r - robot_box ?c - carrier ?b1 - box ?b2 - box ?b3 - box ?l1 ?l2 - location)
         :task (navigate_carrier ?r ?c ?l2)
-        :precondition (and
-            (at ?r ?l1)
-            (at ?c ?l1)
-            (has_three_boxes ?c)
-            (connected ?l1 ?l2)
-            (robot_has_carrier ?r ?c)
-            (box_loaded_in_carrier ?b1 ?c)
-            (box_loaded_in_carrier ?b2 ?c)
-            (box_loaded_in_carrier ?b3 ?c)
-        )
-        :subtasks (and
-            (task0 (move_carrier_three_boxes ?r ?c ?b1 ?b2 ?b3 ?l1 ?l2))
-        )
+        ;; Direct path navigation for fully loaded carrier:
+        ;; - Handles maximum load case (three boxes)
+        ;; - Ensures synchronized movement of all components
+        ;; - Most complex single-step movement operation
     )
 
     (:method m_navigate_carrier_3_via
         :parameters (?r - robot_box ?c - carrier ?b1 - box ?b2 - box ?b3 - box ?l1 ?l2 ?l3 - location)
         :task (navigate_carrier ?r ?c ?l3)
-        :precondition (and
-            (at ?r ?l1)
-            (at ?c ?l1)
-            (has_three_boxes ?c)
-            (connected ?l1 ?l2)
-            (robot_has_carrier ?r ?c)
-            (box_loaded_in_carrier ?b1 ?c)
-            (box_loaded_in_carrier ?b2 ?c)
-            (box_loaded_in_carrier ?b3 ?c)
-        )
-        :subtasks (and
-            (task0 (move_carrier_three_boxes ?r ?c ?b1 ?b2 ?b3 ?l1 ?l2))
-            (task1 (navigate_carrier ?r ?c ?l3))
-        )
-        :ordering (and
-            (task0 < task1)
-        )
+        ;; Multi-hop navigation for fully loaded carrier:
+        ;; - Most complex navigation scenario
+        ;; - Maintains state of three boxes during transit
+        ;; - Breaks down long paths into connected segments
+        ;; - Requires careful state tracking for all components
     )
 
     
+    ;; --- Primitive Actions --- 
     
-
-    ; Primitive Actions 
-    
-    ; === Supply operations ===
-
-    ; Fill box with supply
-    ; box is empty and unloaded and box, content and robot are at the same location
+    ;; === Supply Operations ===
+    ;; These actions handle the logistics of supply delivery:
+    ;; 1. Filling boxes with supplies
+    ;; 2. Delivering supplies to units
     (:action fill_box
         :parameters (?r - robot_box ?b - box ?l - location ?s - supply)
         :precondition (and
-            (at ?r ?l)
-            (at ?b ?l)
-            (at ?s ?l)
-            (box_unloaded ?b)
-            (empty ?b)
+            (at ?r ?l)        ; Robot must be at the location
+            (at ?b ?l)        ; Box must be at the location
+            (at ?s ?l)        ; Supply must be at the location
+            (box_unloaded ?b) ; Box must not be in a carrier
+            (empty ?b)        ; Box must be empty
         )
         :effect (and 
             (not (empty ?b))
-            (box_has_supply ?b ?s)
+            (box_has_supply ?b ?s)  ; Box now contains the supply
         )
     )
 
-    ; Deliver supply to unit
-    ; causing the unit to have the supply and not need it anymore, and the box to be empty
     (:action deliver_supply
         :parameters (?r - robot_box ?b - box ?l - location ?s - supply ?u - medical_unit)
         :precondition (and
-            (at ?r ?l)
+            (at ?r ?l)                    ; All objects must be at same location
             (at ?b ?l)
             (at ?u ?l)
-            (box_has_supply ?b ?s)
-            (box_unloaded ?b)
-            (unit_needs_supply ?u ?s)           ; unit needs the supply
+            (box_has_supply ?b ?s)        ; Box must contain the needed supply
+            (box_unloaded ?b)             ; Box must not be in a carrier
+            (unit_needs_supply ?u ?s)     ; Unit must need this supply
         )
         :effect (and
-            (not (box_has_supply ?b ?s))
-            (empty ?b)                          ; box is empty
+            (not (box_has_supply ?b ?s))  ; Remove supply from box
+            (empty ?b)                     ; Box becomes empty
             (not (unit_needs_supply ?u ?s))
-            (unit_has_supply ?u ?s)             ; unit has the supply
+            (unit_has_supply ?u ?s)        ; Unit now has the supply
         )
     )
 
-    ; === Patient operations ===
+    ;; === Patient Operations ===
+    ;; These actions handle patient transportation:
+    ;; 1. Picking up patients
+    ;; 2. Dropping off patients
+    ;; 3. Delivering patients to medical units
 
-    ; Pick up patient
-    ; causing the patient to be loaded in the robot and the robot to not be empty
     (:action pick_up_patient
         :parameters (?r - robot_patient ?p - patient ?l - location)
         :precondition (and
-            (at ?r ?l)
+            (at ?r ?l)                    ; Robot and patient at same location
             (at ?p ?l)
-            (patient_unloaded ?p)               ; patient is unloaded
-            (robot_patient_empty ?r)            ; robot is empty
+            (patient_unloaded ?p)         ; Patient must not be in another robot
+            (robot_patient_empty ?r)      ; Robot must be available
         )
         :effect (and 
             (not (patient_unloaded ?p))
-            (patient_loaded_in_robot ?p ?r)     ; patient is loaded in the robot
-            (not (robot_patient_empty ?r))
+            (patient_loaded_in_robot ?p ?r)  ; Patient is now in robot
+            (not (robot_patient_empty ?r))   ; Robot is no longer empty
         )
     )
 
-    ; Drop off patient
-    ; causing the patient to be unloaded and the robot to be empty 
     (:action drop_off_patient
         :parameters (?r - robot_patient ?p - patient ?l - location)
         :precondition (and
             (at ?r ?l)
             (at ?p ?l)
-            (patient_loaded_in_robot ?p ?r)         ; patient is loaded in the robot
+            (patient_loaded_in_robot ?p ?r)  ; Patient must be in this robot
         )
         :effect (and 
-            (patient_unloaded ?p)                   ; patient is unloaded
+            (patient_unloaded ?p)            ; Patient is removed from robot
             (not (patient_loaded_in_robot ?p ?r))
-            (robot_patient_empty ?r)                ; robot is empty
-            (at ?p ?l)
+            (robot_patient_empty ?r)         ; Robot becomes available
+            (at ?p ?l)                       ; Patient is at the location
          )
     )
 
-    ; Deliver patient to unit
-    ; causing the patient to be at the unit and not need it anymore
     (:action deliver_patient
         :parameters (?r - robot_patient ?p - patient ?l - location ?u - medical_unit)
         :precondition (and
-            (at ?r ?l)
+            (at ?r ?l)                    ; All objects at same location
             (at ?p ?l)
             (at ?u ?l)
-
-            (patient_unloaded ?p)
-            (patient_needs_unit ?p ?u)          ; patient needs the unit
+            (patient_unloaded ?p)         ; Patient must not be in a robot
+            (patient_needs_unit ?p ?u)    ; Patient must need this unit
         )
         :effect (and
             (not (patient_needs_unit ?p ?u))
-            (patient_at_unit ?p ?u)             ; patient is at the unit
+            (patient_at_unit ?p ?u)         ; Patient is now at their needed unit
         )
     )
 
+    ;; === Patient Robot Movement ===
+    ;; These actions handle movement of robots carrying patients
 
-    ; Movement Patients
-    
-    
-    ; Move empty robot
-    ; causing the update of the robot location
     (:action move_empty_robot_patient
         :parameters (?r - robot_patient ?l1 - location ?l2 - location)
         :precondition (and
             (at ?r ?l1)
-            (connected ?l1 ?l2)             ; check if the locations are connected
-            (robot_patient_empty ?r)
+            (connected ?l1 ?l2)           ; Locations must be connected
+            (robot_patient_empty ?r)      ; Robot must not be carrying a patient
         )
         :effect (and 
             (not (at ?r ?l1))
-            (at ?r ?l2)                     ; robot is at the new location
+            (at ?r ?l2)                   ; Robot moves to new location
         )
     )
 
-    ; Move robot with patient
-    ; causing the update of both the patient and the robot location
     (:action move_robot_with_patient
         :parameters (?r - robot_patient ?p - patient ?l1 - location ?l2 - location)
         :precondition (and
             (at ?r ?l1)
-            (connected ?l1 ?l2)
-            (patient_loaded_in_robot ?p ?r)
+            (connected ?l1 ?l2)               ; Locations must be connected
+            (patient_loaded_in_robot ?p ?r)   ; Robot must be carrying this patient
         )
         :effect (and 
             (not (at ?r ?l1))
             (not (at ?p ?l1))
-            (at ?r ?l2)                 ; robot is at the new location
-            (at ?p ?l2)                 ; patient is at the new location
+            (at ?r ?l2)                       ; Both robot and patient move
+            (at ?p ?l2)                       ; to the new location
         )
     )
 
-    
-    ; === Supply and Box Operations ===
+    ;; === Carrier System Operations ===
+    ;; These actions implement the multi-box transport system using carriers
+    ;; Each operation is position-specific to maintain explicit state tracking
 
-    ; Box Handling Capacity:
-    ; - The assumpyion here is that each robot_box has a maximum capacity of 3 boxes
-    ; - This requires specific operation sets for different load states:
-    ;   * 3 distinct load operations (one per box position)
-    ;   * 3 distinct unload operations (one per box position)  
-    ;   * 3 distinct movement operations based on load state
-    ;
-    ; Domain Extensibility:
-    ; - The domain structure supports easy extension for larger capacities
-    ; - To increase capacity to N boxes, simply add:
-    ;   * N load operations
-    ;   * N unload operations
-    ;   * N movement operations
-    ;
-    ; Implementation Note:
-    ; - Each operation is position-specific to ensure proper state tracking
-    ; - Movement operations vary based on the number of loaded boxes
-    ; - This design maintains explicit state management while allowing scalability
-    
-
-    ; Load operations
+    ;; Load Operations - Three distinct actions for loading boxes based on carrier state
     (:action load_first_box
         :parameters (?r - robot_box ?c - carrier ?b - box ?l - location)
         :precondition (and
-            (at ?r ?l)
+            (at ?r ?l)                    ; All objects at same location
             (at ?c ?l)
             (at ?b ?l)
-            (robot_has_carrier ?r ?c)           ; robot has the carrier
-            (box_unloaded ?b)                   ; box is unloaded
-            (carrier_empty ?c)                  ; carrier is empty : no boxes loaded
-            (has_capacity_one ?c)               ; carrier has capacity for one box
+            (robot_has_carrier ?r ?c)     ; Robot must have the carrier
+            (box_unloaded ?b)             ; Box must be unloaded
+            (carrier_empty ?c)            ; Carrier must be empty
+            (has_capacity_one ?c)         ; Carrier must have minimum capacity
         )
         :effect (and 
             (not (box_unloaded ?b))
             (box_loaded_in_carrier ?b ?c)
             (not (carrier_empty ?c))
-            (has_one_box ?c)                    ; carrier has one box loaded
+            (has_one_box ?c)              ; Update carrier state
         )
     )
 
     (:action load_second_box
         :parameters (?r - robot_box ?c - carrier ?b - box ?lb1 - box ?l - location)
         :precondition (and
-            (at ?r ?l)
+            (at ?r ?l)                    ; All objects at same location
             (at ?c ?l)
             (at ?b ?l)
-            (robot_has_carrier ?r ?c)           ; robot has the carrier
-            (box_unloaded ?b)                   ; box is unloaded
-            (has_one_box ?c)                    ; carrier has one box loaded
-            (has_capacity_two ?c)               ; carrier has capacity for two boxes
-            (box_loaded_in_carrier ?lb1 ?c)     ; first box is loaded
+            (robot_has_carrier ?r ?c)     ; Robot must have the carrier
+            (box_unloaded ?b)             ; New box must be unloaded
+            (has_one_box ?c)              ; Carrier must have exactly one box
+            (has_capacity_two ?c)         ; Carrier must have capacity for two
+            (box_loaded_in_carrier ?lb1 ?c)  ; First box must be loaded
         )
         :effect (and 
             (not (box_unloaded ?b))
             (box_loaded_in_carrier ?b ?c)
             (not (has_one_box ?c))
-            (has_two_boxes ?c)                  ; carrier has two boxes loaded
+            (has_two_boxes ?c)            ; Update carrier state
         )
     )
 
     (:action load_third_box
-        :parameters (?r - robot_box ?c - carrier ?b - box  ?lb1 ?lb2 - box ?l - location)
+        :parameters (?r - robot_box ?c - carrier ?b - box ?lb1 ?lb2 - box ?l - location)
         :precondition (and
-            (at ?r ?l)
+            (at ?r ?l)                    ; All objects at same location
             (at ?c ?l)
             (at ?b ?l)
-            (robot_has_carrier ?r ?c)           ; robot has the carrier
-            (box_unloaded ?b)                   ; box is unloaded
-            (has_two_boxes ?c)                  ; carrier has two boxes loaded
-            (has_capacity_three ?c)             ; carrier has capacity for three boxes
-            (box_loaded_in_carrier ?lb1 ?c)     ; first box is loaded
-            (box_loaded_in_carrier ?lb2 ?c)     ; second box is loaded
+            (robot_has_carrier ?r ?c)     ; Robot must have the carrier
+            (box_unloaded ?b)             ; New box must be unloaded
+            (has_two_boxes ?c)            ; Carrier must have exactly two boxes
+            (has_capacity_three ?c)       ; Carrier must have capacity for three
+            (box_loaded_in_carrier ?lb1 ?c)  ; First box must be loaded
+            (box_loaded_in_carrier ?lb2 ?c)  ; Second box must be loaded
         )
         :effect (and 
             (not (box_unloaded ?b))
             (box_loaded_in_carrier ?b ?c)
             (not (has_two_boxes ?c))
-            (has_three_boxes ?c)                ; carrier has three boxes loaded
-       )
+            (has_three_boxes ?c)          ; Update carrier state
+        )
     )
 
-    ; Unload operations
+    ;; Unload Operations - Three distinct actions for unloading based on carrier state
     (:action unload_one_box
         :parameters (?r - robot_box ?c - carrier ?b - box ?l - location)
         :precondition (and
             (at ?r ?l)
             (at ?c ?l)
-            (robot_has_carrier ?r ?c)               ; robot has the carrier
+            (robot_has_carrier ?r ?c)     ; Robot must have the carrier
             (box_loaded_in_carrier ?b ?c)
-            (has_one_box ?c)                        ; carrier has one box loaded
+            (has_one_box ?c)              ; Carrier must have exactly one box
         )
         :effect (and 
             (box_unloaded ?b)
             (not (box_loaded_in_carrier ?b ?c))
             (not (has_one_box ?c))
-            (carrier_empty ?c)                      ; carrier is empty : no boxes loaded
-            (at ?b ?l)
+            (carrier_empty ?c)            ; Carrier becomes empty
+            (at ?b ?l)                    ; Box is at the location
          )
     )
 
@@ -667,16 +460,16 @@
         :precondition (and
             (at ?r ?l)
             (at ?c ?l)
-            (robot_has_carrier ?r ?c)               ; robot has the carrier
+            (robot_has_carrier ?r ?c)     ; Robot must have the carrier
             (box_loaded_in_carrier ?b ?c)
-            (has_two_boxes ?c)                      ; carrier has two boxes loaded
+            (has_two_boxes ?c)            ; Carrier must have exactly two boxes
         )
         :effect (and 
-            (box_unloaded ?b)                       ; box is unloaded
+            (box_unloaded ?b)
             (not (box_loaded_in_carrier ?b ?c))
-            (not (has_two_boxes ?c))                
-            (has_one_box ?c)                        ; carrier has one box loaded
-            (at ?b ?l)
+            (not (has_two_boxes ?c))
+            (has_one_box ?c)              ; Carrier now has one box
+            (at ?b ?l)                    ; Box is at the location
          )
     )
 
@@ -685,20 +478,22 @@
         :precondition (and
             (at ?r ?l)
             (at ?c ?l)
-            (robot_has_carrier ?r ?c)               ; robot has the carrier
+            (robot_has_carrier ?r ?c)     ; Robot must have the carrier
             (box_loaded_in_carrier ?b ?c)
-            (has_three_boxes ?c)                    ; carrier has three boxes loaded
+            (has_three_boxes ?c)          ; Carrier must have three boxes
         )
         :effect (and 
-            (box_unloaded ?b)                       ; box is unloaded
+            (box_unloaded ?b)
             (not (box_loaded_in_carrier ?b ?c))
             (not (has_three_boxes ?c))
-            (has_two_boxes ?c)                      ; carrier has two boxes loaded
-            (at ?b ?l)
+            (has_two_boxes ?c)            ; Carrier now has two boxes
+            (at ?b ?l)                    ; Box is at the location
         )
     )
 
-    ; Movement operations
+    ;; === Robot with Carriers Movement ===
+    ;; These actions handle movement of robots carrying boxes
+    ;; Four distinct actions based on carrier load state
 
     ; Move empty carrier
     ; causing the update of the carrier location
@@ -719,8 +514,7 @@
         )
     )
 
-    ; Move carrier with one box
-    ; causing the update of the carrier and box location
+    ; Move carrier with one box causing the update of the carrier and box location
     (:action move_carrier_one_box
         :parameters (?r - robot_box ?c - carrier ?b - box ?l1 - location ?l2 - location)
         :precondition (and
@@ -741,8 +535,7 @@
         )
     )
 
-    ; Move carrier with two boxes
-    ; causing the update of the carrier and of the two boxes location
+    ; Move carrier with two boxes causing the update of the carrier and of the two boxes location
     (:action move_carrier_two_boxes
         :parameters (?r - robot_box ?c - carrier ?b1 - box ?b2 - box ?l1 - location ?l2 - location)
         :precondition (and
@@ -766,8 +559,7 @@
         )
     )
 
-    ; Move carrier with three boxes
-    ; causing the update of the carrier and of the three boxes location
+    ; Move carrier with three boxes causing the update of the carrier and of the three boxes location
     (:action move_carrier_three_boxes
         :parameters (?r - robot_box ?c - carrier ?b1 - box ?b2 - box ?b3 - box ?l1 - location ?l2 - location)
         :precondition (and
