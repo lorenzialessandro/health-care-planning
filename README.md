@@ -143,7 +143,7 @@ cd problem_4
 ```
 Problems can be executed using `OPTIC` or `POPF`:
 ```bash
-optic -N domain.pddl p1.pddl 
+optic domain.pddl p1.pddl 
 ```
 
 ```bash
