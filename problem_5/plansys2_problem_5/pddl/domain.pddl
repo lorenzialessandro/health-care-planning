@@ -1,58 +1,60 @@
+;; Healthcare Domain with Durative Actions
 (define (domain healthcare_durative)
     (:requirements :strips :typing :durative-actions)
+
     (:types
         medical_unit box supply robot_box robot_patient carrier patient - locatable
-        location  - object
+        location - object
     )
 
     (:predicates
-        ; Location predicates
-        (at ?o - locatable ?l - location)
-        (connected ?l1 - location ?l2 - location)
+        ;; Location predicates
+        (at ?o - locatable ?l - location)           ; Object ?o is at location ?l
+        (connected ?l1 - location ?l2 - location)   ; Location ?l1 is directly connected to ?l2
         
-        ; Box predicates
-        (box_loaded_in_carrier ?b - box ?c - carrier)
-        (box_unloaded ?b - box)
-        (empty ?b - box)
-        (box_has_supply ?b - box ?s - supply)
+        ;; Box predicates
+        (box_loaded_in_carrier ?b - box ?c - carrier)   ; Box ?b is loaded in carrier ?c
+        (box_unloaded ?b - box)                         ; Box ?b is not in any carrier
+        (empty ?b - box)                                ; Box ?b contains no supplies
+        (box_has_supply ?b - box ?s - supply)          ; Box ?b contains supply ?s
         
-        ; Unit predicates
-        (unit_needs_supply ?u - medical_unit ?s - supply)
-        (unit_has_supply ?u - medical_unit ?s - supply)
+        ;; Unit predicates
+        (unit_needs_supply ?u - medical_unit ?s - supply)    ; Medical unit ?u needs supply ?s
+        (unit_has_supply ?u - medical_unit ?s - supply)      ; Medical unit ?u has supply ?s
         
-        ; Carrier capacity tracking
-        (has_one_box ?c - carrier)
-        (has_two_boxes ?c - carrier)
-        (has_three_boxes ?c - carrier)
+        ;; Carrier capacity tracking predicates
+        (has_one_box ?c - carrier)              ; Carrier contains exactly one box
+        (has_two_boxes ?c - carrier)            ; Carrier contains exactly two boxes
+        (has_three_boxes ?c - carrier)          ; Carrier contains exactly three boxes
+        (carrier_empty ?c - carrier)            ; Carrier contains no boxes
         
-        (carrier_empty ?c - carrier)
-        
-        (has_capacity_one ?c - carrier)
-        (has_capacity_two ?c - carrier)
-        (has_capacity_three ?c - carrier)
+        ;; Carrier capability predicates
+        (has_capacity_one ?c - carrier)         ; Carrier can hold at least one box
+        (has_capacity_two ?c - carrier)         ; Carrier can hold at least two boxes
+        (has_capacity_three ?c - carrier)       ; Carrier can hold three boxes
 
-        ; Robot predicates
-        (robot_has_carrier ?r - robot_box ?c - carrier)
+        ;; Robot and carrier relationship predicates
+        (robot_has_carrier ?r - robot_box ?c - carrier)  ; Robot ?r is connected to carrier ?c
 
-        ; Patient predicates
-        (patient_unloaded ?p - patient)
-        (patient_loaded_in_robot ?p - patient ?r - robot_patient)
-        (patient_needs_unit ?p - patient ?u - medical_unit)
-        (patient_at_unit ?p - patient ?u - medical_unit)
+        ;; Patient predicates
+        (patient_unloaded ?p - patient)                      ; Patient ?p is not in any robot
+        (patient_loaded_in_robot ?p - patient ?r - robot_patient)  ; Patient ?p is in robot ?r
+        (patient_needs_unit ?p - patient ?u - medical_unit)       ; Patient ?p needs to go to unit ?u
+        (patient_at_unit ?p - patient ?u - medical_unit)         ; Patient ?p is at unit ?u
 
-        ; Robot patient predicates
-        (robot_patient_empty ?r - robot_patient)
-
-        ; Predicate to track busy robots (new)
-        (robot_box_not_busy ?r - robot_box)
-        (robot_patient_not_busy ?r - robot_patient)
+        ;; Robot state predicates
+        (robot_patient_empty ?r - robot_patient)    ; Patient robot ?r is not carrying anyone
+        
+        ;; Robot busy state tracking (new)
+        (robot_box_not_busy ?r - robot_box)        ; Box robot ?r is available for actions
+        (robot_patient_not_busy ?r - robot_patient) ; Patient robot ?r is available for actions
     )
     
-
-    ; === Supply operations ===
-
-    ; Fill box with supply
-    ; box is empty and unloaded and box, content and robot are at the same location
+    ;; === Supply Operations ===
+    ;; These actions handle the logistics of supply delivery:
+    ;; 1. Filling boxes with supplies
+    ;; 2. Delivering supplies to units
+    
     (:durative-action fill_box
         :parameters (?r - robot_box ?b - box ?l - location ?s - supply)
         :duration (= ?duration 3) ; 3 time units to fill a box
@@ -64,23 +66,22 @@
             (at start (empty ?b))
 
             (at start (robot_box_not_busy ?r))
+
             (over all (at ?r ?l))
             (over all (at ?b ?l))
             (over all (at ?s ?l))
             (over all (box_unloaded ?b))
         )
         :effect (and 
-            (at start (not (robot_box_not_busy ?r)))
+            (at start (not (robot_box_not_busy ?r)))    ; Robot becomes busy
 
-            (at end (not (empty ?b)))
+            (at end (not (empty ?b)))                   ; Box if filled
             (at end (box_has_supply ?b ?s))
 
-            (at end (robot_box_not_busy ?r))
+            (at end (robot_box_not_busy ?r))            ; Robot becomes available
         )
     )
-
-    ; Deliver supply to unit
-    ; causing the unit to have the supply and not need it anymore, and the box to be empty
+    
     (:durative-action deliver_supply
         :parameters (?r - robot_box ?b - box ?l - location ?s - supply ?u - medical_unit)
         :duration (= ?duration 1) ; 1 time unit to deliver supply
@@ -98,21 +99,22 @@
             (over all (box_unloaded ?b))
         )
         :effect (and
-            (at start (not (robot_box_not_busy ?r)))
+            (at start (not (robot_box_not_busy ?r)))    ; Robot becomes busy
 
             (at end (not (box_has_supply ?b ?s)))
             (at end (empty ?b))
             (at end (not (unit_needs_supply ?u ?s)))
-            (at end (unit_has_supply ?u ?s))
+            (at end (unit_has_supply ?u ?s))            ; Unit has the supply
 
-            (at end (robot_box_not_busy ?r))
+            (at end (robot_box_not_busy ?r))            ; Robot becomes available
         )
     )
 
-    ; === Patient operations ===
-
-    ; Pick up patient
-    ; causing the patient to be loaded in the robot and the robot to not be empty
+        ;; === Patient Operations ===
+    ;; These actions handle patient transportation:
+    ;; 1. Picking up patients
+    ;; 2. Dropping off patients
+    ;; 3. Delivering patients to medical units
     (:durative-action pick_up_patient
         :parameters (?r - robot_patient ?p - patient ?l - location)
         :duration (= ?duration 2) ; 2 time units to pick up a patient
@@ -127,18 +129,16 @@
             (over all (at ?p ?l))
         )
         :effect (and 
-            (at start (not (robot_patient_not_busy ?r)))
+            (at start (not (robot_patient_not_busy ?r)))    ; Robot becomes busy
 
             (at end (not (patient_unloaded ?p)))
-            (at end (patient_loaded_in_robot ?p ?r))
+            (at end (patient_loaded_in_robot ?p ?r))    ; Patient is loaded in robot    
             (at end (not (robot_patient_empty ?r)))
 
-            (at end (robot_patient_not_busy ?r))
+            (at end (robot_patient_not_busy ?r))    ; Robot becomes available
         )
     )
 
-    ; Drop off patient
-    ; causing the patient to be unloaded and the robot to be empty 
     (:durative-action drop_off_patient
         :parameters (?r - robot_patient ?p - patient ?l - location)
         :duration (= ?duration 2) ; 2 time units to drop off a patient
@@ -152,19 +152,17 @@
             (over all (at ?p ?l))
         )
         :effect (and 
-            (at start (not (robot_patient_not_busy ?r)))
+            (at start (not (robot_patient_not_busy ?r)))    ; Robot becomes busy
 
             (at end (patient_unloaded ?p))
-            (at end (not (patient_loaded_in_robot ?p ?r)))
+            (at end (not (patient_loaded_in_robot ?p ?r)))  ; Patient is unloaded from robot
             (at end (robot_patient_empty ?r))
             (at end (at ?p ?l))
 
-            (at end (robot_patient_not_busy ?r))
+            (at end (robot_patient_not_busy ?r))    ; Robot becomes available
          )
     )
 
-    ; Deliver patient to unit
-    ; causing the patient to be at the unit and not need it anymore
     (:durative-action deliver_patient
         :parameters (?r - robot_patient ?p - patient ?l - location ?u - medical_unit)
         :duration (= ?duration 1) ; 1 time unit to deliver a patient
@@ -181,20 +179,19 @@
             (over all (patient_unloaded ?p))
         )
         :effect (and
-            (at start (not (robot_patient_not_busy ?r)))
+            (at start (not (robot_patient_not_busy ?r)))   ; Robot becomes busy
 
             (at end (not (patient_needs_unit ?p ?u)))
-            (at end (patient_at_unit ?p ?u))
+            (at end (patient_at_unit ?p ?u))           ; Patient is at the unit
 
-            (at end (robot_patient_not_busy ?r))
+            (at end (robot_patient_not_busy ?r))    ; Robot becomes available
         )
     )
 
 
-    ; Movement Patients
+    ;; === Patient Robot Movement ===
+    ;; These actions handle movement of robots carrying patients
 
-    ; Move empty robot
-    ; causing the update of the robot location
     (:durative-action move_empty_robot_patient
         :parameters (?r - robot_patient ?l1 - location ?l2 - location)
         :duration (= ?duration 2) ; 2 time units to move an empty robot
@@ -207,17 +204,15 @@
             (over all (robot_patient_empty ?r))
         )
         :effect (and
-            (at start (not (robot_patient_not_busy ?r)))
+            (at start (not (robot_patient_not_busy ?r)))   ; Robot becomes busy
 
             (at start (not (at ?r ?l1)))
-            (at start (at ?r ?l2))
+            (at start (at ?r ?l2))                       ; Robot moves to new location
         
-            (at end (robot_patient_not_busy ?r))
+            (at end (robot_patient_not_busy ?r))    ; Robot becomes available
         )
     )
 
-    ; Move robot with patient
-    ; causing the update of both the patient and the robot location
     (:durative-action move_robot_with_patient
         :parameters (?r - robot_patient ?p - patient ?l1 - location ?l2 - location)
         :duration (= ?duration 3) ; 3 time units to move a robot with a patient
@@ -230,40 +225,24 @@
             (over all (patient_loaded_in_robot ?p ?r))
         )
         :effect (and
-            (at start (not (robot_patient_not_busy ?r)))
+            (at start (not (robot_patient_not_busy ?r)))  ; Robot becomes busy
 
             (at start (not (at ?r ?l1)))
             (at start (not (at ?p ?l1)))
-            (at start (at ?r ?l2))
-            (at start (at ?p ?l2))
+            (at start (at ?r ?l2))                    ; Robot moves to new location
+            (at start (at ?p ?l2))                  ; Patient moves to new location
 
-            (at end (robot_patient_not_busy ?r))
+            (at end (robot_patient_not_busy ?r))    ; Robot becomes available
         )
     )
 
-    ; === Supply and Box Operations ===
-
-    ; Box Handling Capacity:
-    ; - The assumpyion here is that each robot_box has a maximum capacity of 3 boxes
-    ; - This requires specific operation sets for different load states:
-    ;   * 3 distinct load operations (one per box position)
-    ;   * 3 distinct unload operations (one per box position)  
-    ;   * 3 distinct movement operations based on load state
-    ;
-    ; Domain Extensibility:
-    ; - The domain structure supports easy extension for larger capacities
-    ; - To increase capacity to N boxes, simply add:
-    ;   * N load operations
-    ;   * N unload operations
-    ;   * N movement operations
-    ;
-    ; Implementation Note:
-    ; - Each operation is position-specific to ensure proper state tracking
-    ; - Movement operations vary based on the number of loaded boxes
-    ; - This design maintains explicit state management while allowing scalability
     
+    ;; === Carrier System Operations ===
+    ;; These actions implement the multi-box transport system using carriers
+    ;; Each operation is position-specific to maintain explicit state tracking
 
-    ; Load operations
+
+    ;; Load Operations - Three distinct actions for loading boxes based on carrier state
     (:durative-action load_first_box
         :parameters (?r - robot_box ?c - carrier ?b - box ?l - location)
         :duration (= ?duration 2) ; 2 time units to load a box
@@ -283,14 +262,14 @@
             (over all (robot_has_carrier ?r ?c))
         )
         :effect (and 
-            (at start (not (robot_box_not_busy ?r)))
+            (at start (not (robot_box_not_busy ?r)))   ; Robot becomes busy
 
             (at end (not (box_unloaded ?b)))
-            (at end (box_loaded_in_carrier ?b ?c))
+            (at end (box_loaded_in_carrier ?b ?c))   ; Box is loaded in carrier
             (at end (not (carrier_empty ?c)))
-            (at end (has_one_box ?c))
+            (at end (has_one_box ?c))             ; Carrier has one box
 
-            (at end (robot_box_not_busy ?r))
+            (at end (robot_box_not_busy ?r))    ; Robot becomes available
         )
     )
 
@@ -302,10 +281,10 @@
             (at start (at ?c ?l))
             (at start (at ?b ?l))
             (at start (robot_has_carrier ?r ?c))
-            (at start (box_unloaded ?b))
-            (at start (has_one_box ?c))
-            (at start (has_capacity_two ?c))
-            (at start (box_loaded_in_carrier ?lb1 ?c))
+            (at start (box_unloaded ?b))      ; Box is not in any carrier
+            (at start (has_one_box ?c))            ; Carrier has one box
+            (at start (has_capacity_two ?c))    ; Carrier can hold two boxes
+            (at start (box_loaded_in_carrier ?lb1 ?c))  ; Carrier already has a box
             (at start (robot_box_not_busy ?r))
             (over all (at ?r ?l))
             (over all (at ?c ?l))
@@ -317,7 +296,7 @@
             (at end (not (box_unloaded ?b)))
             (at end (box_loaded_in_carrier ?b ?c))
             (at end (not (has_one_box ?c)))
-            (at end (has_two_boxes ?c))
+            (at end (has_two_boxes ?c))            ; Carrier has two boxes
             (at end (robot_box_not_busy ?r))
         )
     )
@@ -346,12 +325,12 @@
             (at end (not (box_unloaded ?b)))
             (at end (box_loaded_in_carrier ?b ?c))
             (at end (not (has_two_boxes ?c)))
-            (at end (has_three_boxes ?c))
+            (at end (has_three_boxes ?c))         ; Carrier has three boxes
             (at end (robot_box_not_busy ?r))
         )
     )
 
-    ; Unload operations
+    ;; Unload Operations - Three distinct actions for unloading based on carrier state
     (:durative-action unload_one_box
         :parameters (?r - robot_box ?c - carrier ?b - box ?l - location)
         :duration (= ?duration 2) ; 2 time units to unload a box
@@ -367,13 +346,13 @@
             (over all (robot_has_carrier ?r ?c))
         )
         :effect (and 
-            (at start (not (robot_box_not_busy ?r)))
-            (at end (box_unloaded ?b))
+            (at start (not (robot_box_not_busy ?r)))    ; Robot becomes busy
+            (at end (box_unloaded ?b))                ; Box is unloaded
             (at end (not (box_loaded_in_carrier ?b ?c)))
-            (at end (not (has_one_box ?c)))
+            (at end (not (has_one_box ?c))) 
             (at end (carrier_empty ?c))
             (at end (at ?b ?l))
-            (at end (robot_box_not_busy ?r))
+            (at end (robot_box_not_busy ?r))        ; Robot becomes available
          )
     )
 
@@ -427,7 +406,9 @@
         )
     )
 
-    ; Movement operations
+    ;; === Robot with Carriers Movement ===
+    ;; These actions handle movement of robots carrying boxes
+    ;; Four distinct actions based on carrier load state
 
     ; Move empty carrier
     ; causing the update of the carrier location
@@ -446,12 +427,12 @@
             (over all (robot_has_carrier ?r ?c))
         )
         :effect (and 
-            (at start (not (robot_box_not_busy ?r)))
+            (at start (not (robot_box_not_busy ?r)))   ; Robot becomes busy
             (at start (not (at ?r ?l1)))
             (at start (not (at ?c ?l1)))
-            (at start (at ?r ?l2))
-            (at start (at ?c ?l2))
-            (at end (robot_box_not_busy ?r))
+            (at start (at ?r ?l2))                  ; Robot moves to new location
+            (at start (at ?c ?l2))                ; Carrier moves to new location
+            (at end (robot_box_not_busy ?r))    ; Robot becomes available
         )
     )
 
@@ -472,14 +453,14 @@
             (over all (robot_has_carrier ?r ?c))
         )
         :effect (and 
-            (at start (not (robot_box_not_busy ?r)))
+            (at start (not (robot_box_not_busy ?r)))    ; Robot becomes busy
             (at start (not (at ?r ?l1)))
             (at start (not (at ?c ?l1)))
             (at start (not (at ?b ?l1)))
-            (at start (at ?r ?l2))
-            (at start (at ?c ?l2))
-            (at start (at ?b ?l2))
-            (at end (robot_box_not_busy ?r))
+            (at start (at ?r ?l2))                ; Robot moves to new location
+            (at start (at ?c ?l2))                ; Carrier moves to new location
+            (at start (at ?b ?l2))                  ; Box moves to new location
+            (at end (robot_box_not_busy ?r))        ; Robot becomes available
         )
     )
 
